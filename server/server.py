@@ -35,17 +35,24 @@ client, address = server.accept()
 print("Client connected:", address)
 
 
-# Receive data from the client.
-# recv() receives bytes from the network.
-data = client.recv(1024)
+# Keep receiving messages from the client.
+while True:
+
+    # Receive data from the client.
+    data = client.recv(1024)
+
+    # Convert the received bytes into text.
+    message = data.decode()
+
+    # Check if the client wants to leave.
+    if message.lower() == "exit":
+        print("Client left the chat.")
+        break
+
+    # Display the message.
+    print("Client:", message)
 
 
-# Convert the received bytes back into normal text.
-message = data.decode()
-
-print("Client:", message)
-
-
-# Close the connection after receiving the message.
+# Close the connection.
 client.close()
 server.close()

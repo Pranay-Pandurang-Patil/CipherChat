@@ -18,19 +18,25 @@ client.connect((HOST, PORT))
 
 print("Connected to CipherChat server.")
 
-# Ask the user for a message.
-message = input("You: ")
+# Keep asking the user for messages.
+while True:
 
-# Convert the text into bytes.
-# Sockets send bytes, not normal Python strings.
-data = message.encode()
+    # Ask the user to type a message.
+    message = input("You: ")
+
+    # Check if the user wants to leave the chat.
+    if message.lower() == "exit":
+        print("Closing connection...")
+        break
+
+    # Convert the text into bytes.
+    data = message.encode()
+
+    # Send the message to the server.
+    client.send(data)
+
+    print("Message sent.")
 
 
-# Send the message to the server.
-client.send(data)
-
-print("Message sent.")
-
-
-# Close the connection.
+# Close the connection after leaving the loop.
 client.close()
