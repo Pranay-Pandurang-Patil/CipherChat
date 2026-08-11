@@ -41,7 +41,7 @@ while True:
     # Receive data from the client.
     data = client.recv(1024)
 
-    # Convert the received bytes into text.
+    # Convert bytes into text.
     message = data.decode()
 
     # Check if the client wants to leave.
@@ -51,6 +51,15 @@ while True:
 
     # Display the message.
     print("Client:", message)
+
+   # Ask the server user to type a reply.
+    reply = input("Server: ")
+
+     # Convert the reply into bytes.
+    data = reply.encode()
+
+    # Send the reply to the client.
+    client.send(data)
 
 
 # Close the connection.

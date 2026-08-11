@@ -21,22 +21,28 @@ print("Connected to CipherChat server.")
 # Keep asking the user for messages.
 while True:
 
-    # Ask the user to type a message.
+    # Ask the user for a message.
     message = input("You: ")
 
-    # Check if the user wants to leave the chat.
-    if message.lower() == "exit":
-        print("Closing connection...")
-        break
-
-    # Convert the text into bytes.
+    # Convert the message into bytes.
     data = message.encode()
 
     # Send the message to the server.
     client.send(data)
 
-    print("Message sent.")
+    # If the user wants to exit, stop after notifying the server.
+    if message.lower() == "exit":
+        print("Closing connection...")
+        break
+
+    # Wait for the server's reply.
+    data = client.recv(1024)
+
+    # Convert the reply from bytes into text.
+    reply = data.decode()
+
+    print("Server:", reply)
 
 
-# Close the connection after leaving the loop.
+# Close the connection.
 client.close()
