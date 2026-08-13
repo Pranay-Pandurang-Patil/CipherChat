@@ -20,93 +20,94 @@ server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind((HOST, PORT))
 
 
-# Start waiting for incoming connections.
+# Start listening for incoming clients.
 server.listen()
 
 print("CipherChat server started.")
-print("Waiting for a client...")
+print("Waiting for clients...")
 
 
-# accept() pauses the program until a client connects.
-# It returns:
-# 1. A new socket for communicating with the client.
-# 2. The client's IP address and port.
-client, address = server.accept()
+# Store the sockets of all connected clients.
+clients = []
 
-print("Client connected:", address)
 
-def receive_messages():
+def handle_client(client, address):
 
-    # Store data that has not formed a complete message yet.
+    # Each client has its own message buffer.
     buffer = ""
 
-    # Keep waiting for messages from the client.
+    print("Client connected:", address)
+
+    # Keep communicating with this client.
     while True:
 
         try:
-            # Receive data from the client.
+            # Receive data from this client.
             data = client.recv(1024)
 
-            # Check if the client closed the connection.
+            # If no data is received, the client closed the connection.
             if data == b"":
-                print("Client disconnected.")
+                print("Client disconnected:", address)
                 break
 
-            # Convert bytes into text.
+            # Add the received data to this client's buffer.
             buffer = buffer + data.decode()
 
-            # Process every complete message in the buffer.
+            # Check whether a complete message exists.
             while "\n" in buffer:
 
-                # Split the first complete message from the remaining data.
+                # Get one complete message.
+                # Keep the remaining data in the buffer.
                 message, buffer = buffer.split("\n", 1)
 
                 # Check if the client wants to leave.
                 if message.lower() == "exit":
-                    print("Client left the chat.")
-                    return
+                    print("Client left:", address)
+                    break
 
-                # Display the client's message.
-                print("Client:", message)
+                # Display the message.
+                print("Client", address, ":", message)
+
+                # Add the sender's address to the message.
+                broadcast_message = str(address) + ": " + message + "\n"
+
+                # Send the message to every other connected client.
+                for other_client in clients:
+
+                    # Do not send the message back to the sender.
+                    if other_client != client:
+
+                        # Convert the message into bytes and send it.
+                        other_client.send(broadcast_message.encode())
 
         except ConnectionResetError:
+
             # The client closed the connection unexpectedly.
-            print("Client connection was reset.")
+            print("Client connection was reset:", address)
             break
 
-# Create a thread for receiving client messages.
-receive_thread = threading.Thread(target=receive_messages)
+    # Remove the client from the list.
+    if client in clients:
+        clients.remove(client)
 
-# Start the receiving thread.
-receive_thread.start()
+    # Close this client's socket.
+    client.close()
 
 
-# Main program is now used for sending messages.
+# Keep accepting new clients.
 while True:
 
-    # Ask the server user for a reply.
-    reply = input("Server: ")
+    # Wait for a new client.
+    client, address = server.accept()
 
-    # Convert the reply into bytes.
-    reply = input("Server: ")
+    # Add the new client to our list.
+    clients.append(client)
 
-# Add a newline to mark the end of our message.
-    reply = reply + "\n"
+    # Create a separate thread for this client.
+    client_thread = threading.Thread(
+        target=handle_client,
+        args=(client, address)
+    )
 
-# Convert the reply into bytes.
-    data = reply.encode()
-
-# Send the reply to the client.
-    client.send(data)
-
-    # Stop if the server user wants to exit.
-    if reply.lower() == "exit":
-        print("Closing connection...")
-        break
-
-
-# Close the connection.
-client.close()
-
-# Close the server socket.
-server.close()
+    # Start the client thread.
+    client_thread.start()
