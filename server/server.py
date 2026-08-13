@@ -35,26 +35,44 @@ client, address = server.accept()
 
 print("Client connected:", address)
 
-
 def receive_messages():
+
+    # Store data that has not formed a complete message yet.
+    buffer = ""
 
     # Keep waiting for messages from the client.
     while True:
 
-        # Receive data from the client.
-        data = client.recv(1024)
+        try:
+            # Receive data from the client.
+            data = client.recv(1024)
 
-        # Convert the received bytes into text.
-        message = data.decode()
+            # Check if the client closed the connection.
+            if data == b"":
+                print("Client disconnected.")
+                break
 
-        # Check if the client wants to leave.
-        if message.lower() == "exit":
-            print("Client left the chat.")
+            # Convert bytes into text.
+            buffer = buffer + data.decode()
+
+            # Process every complete message in the buffer.
+            while "\n" in buffer:
+
+                # Split the first complete message from the remaining data.
+                message, buffer = buffer.split("\n", 1)
+
+                # Check if the client wants to leave.
+                if message.lower() == "exit":
+                    print("Client left the chat.")
+                    return
+
+                # Display the client's message.
+                print("Client:", message)
+
+        except ConnectionResetError:
+            # The client closed the connection unexpectedly.
+            print("Client connection was reset.")
             break
-
-        # Display the client's message.
-        print("Client:", message)
-
 
 # Create a thread for receiving client messages.
 receive_thread = threading.Thread(target=receive_messages)
@@ -70,9 +88,15 @@ while True:
     reply = input("Server: ")
 
     # Convert the reply into bytes.
+    reply = input("Server: ")
+
+# Add a newline to mark the end of our message.
+    reply = reply + "\n"
+
+# Convert the reply into bytes.
     data = reply.encode()
 
-    # Send the reply to the client.
+# Send the reply to the client.
     client.send(data)
 
     # Stop if the server user wants to exit.

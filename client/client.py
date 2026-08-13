@@ -22,18 +22,42 @@ client.connect((HOST, PORT))
 
 def receive_messages():
 
+    # Store data that has not formed a complete message yet.
+    buffer = ""
+
     # Keep waiting for messages from the server.
     while True:
 
-        # Receive data from the server.
-        data = client.recv(1024)
+        try:
+            # Receive data from the server.
+            data = client.recv(1024)
 
-        # Convert the received bytes into text.
-        message = data.decode()
+            # Check if the server closed the connection.
+            if data == b"":
+                print("Server disconnected.")
+                break
 
-        # Display the server's message.
-        print("Server:", message)
+            # Convert bytes into text.
+            buffer = buffer + data.decode()
 
+            # Check if we have a complete message.
+            while "\n" in buffer:
+
+                # Split the first complete message from the remaining data.
+                message, buffer = buffer.split("\n", 1)
+
+                # Check if the server wants to leave.
+                if message.lower() == "exit":
+                    print("Server left the chat.")
+                    return
+
+                # Display the message.
+                print("Server:", message)
+
+        except ConnectionResetError:
+            # The server closed the connection unexpectedly.
+            print("Server connection was reset.")
+            break
 
 # Create a thread for receiving messages.
 receive_thread = threading.Thread(target=receive_messages)
@@ -52,9 +76,13 @@ while True:
     message = input("You: ")
 
     # Convert the message into bytes.
+    # Add a newline to mark the end of our message.
+    message = message + "\n"
+
+# Convert the message into bytes.
     data = message.encode()
 
-    # Send the message to the server.
+# Send the message to the server.
     client.send(data)
 
     # Check if the user wants to exit.
