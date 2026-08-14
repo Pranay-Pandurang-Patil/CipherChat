@@ -27,8 +27,10 @@ print("CipherChat server started.")
 print("Waiting for clients...")
 
 
-# Store the sockets of all connected clients.
-clients = []
+# Store connected clients and their usernames.
+# Format:
+# socket -> username
+clients = {}
 
 
 def handle_client(client, address):
@@ -38,60 +40,80 @@ def handle_client(client, address):
 
     print("Client connected:", address)
 
-    # Keep communicating with this client.
-    while True:
+    try:
 
-        try:
+        # Ask the client for a username.
+        client.send("USERNAME?\n".encode())
+
+        # Receive the username.
+        data = client.recv(1024)
+
+        # Convert bytes into text.
+        username = data.decode().strip()
+
+        # Store the client and username.
+        clients[client] = username
+
+        print(username, "joined the chat.")
+
+        # Send a welcome message.
+        client.send("Welcome to CipherChat!\n".encode())
+
+
+        # Keep communicating with this client.
+        while True:
+
             # Receive data from this client.
             data = client.recv(1024)
 
-            # If no data is received, the client closed the connection.
+            # Check if the client closed the connection.
             if data == b"":
-                print("Client disconnected:", address)
+                print(username, "disconnected.")
                 break
 
-            # Add the received data to this client's buffer.
+            # Add received data to the client's buffer.
             buffer = buffer + data.decode()
 
-            # Check whether a complete message exists.
+            # Process complete messages.
             while "\n" in buffer:
 
-                # Get one complete message.
-                # Keep the remaining data in the buffer.
+                # Separate one complete message.
                 message, buffer = buffer.split("\n", 1)
 
                 # Check if the client wants to leave.
                 if message.lower() == "exit":
-                    print("Client left:", address)
-                    break
+                    print(username, "left the chat.")
+                    return
 
-                # Display the message.
-                print("Client", address, ":", message)
+                # Display the message on the server.
+                print(username + ":", message)
 
-                # Add the sender's address to the message.
-                broadcast_message = str(address) + ": " + message + "\n"
+                # Create the message that other clients will receive.
+                broadcast_message = username + ": " + message + "\n"
 
-                # Send the message to every other connected client.
+                # Send the message to every other client.
                 for other_client in clients:
 
-                    # Do not send the message back to the sender.
+                    # Don't send the message back to the sender.
                     if other_client != client:
 
-                        # Convert the message into bytes and send it.
-                        other_client.send(broadcast_message.encode())
+                        other_client.send(
+                            broadcast_message.encode()
+                        )
 
-        except ConnectionResetError:
+    except ConnectionResetError:
 
-            # The client closed the connection unexpectedly.
-            print("Client connection was reset:", address)
-            break
+        # Handle an unexpected connection close.
+        print(username, "connection was reset.")
 
-    # Remove the client from the list.
-    if client in clients:
-        clients.remove(client)
+    finally:
 
-    # Close this client's socket.
-    client.close()
+        # Remove the client from the dictionary.
+        if client in clients:
+            del clients[client]
+
+        # Close the client's socket.
+        client.close()
 
 
 # Keep accepting new clients.
@@ -100,10 +122,7 @@ while True:
     # Wait for a new client.
     client, address = server.accept()
 
-    # Add the new client to our list.
-    clients.append(client)
-
-    # Create a separate thread for this client.
+    # Create a thread for this client.
     client_thread = threading.Thread(
         target=handle_client,
         args=(client, address)
