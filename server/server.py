@@ -33,10 +33,33 @@ print("Waiting for clients...")
 clients = {}
 
 
+def valid_username(username):
+
+    # Username cannot be empty.
+    if username == "":
+        return False
+
+    # Username cannot be longer than 20 characters.
+    if len(username) > 20:
+        return False
+
+    # Check every character.
+    for character in username:
+
+        # Allow letters, numbers and underscore.
+        if not (character.isalnum() or character == "_"):
+            return False
+
+    return True
+
+
 def handle_client(client, address):
 
     # Each client has its own message buffer.
     buffer = ""
+
+    # Keep the username empty until validation is completed.
+    username = ""
 
     print("Client connected:", address)
 
@@ -45,25 +68,52 @@ def handle_client(client, address):
         # Ask the client for a username.
         client.send("USERNAME?\n".encode())
 
+
         # Receive the username.
         data = client.recv(1024)
 
         # Convert bytes into text.
         username = data.decode().strip()
 
+
+        # Check if the username is valid.
+        if not valid_username(username):
+
+            client.send(
+                "Invalid username. Use letters, numbers and underscore only.\n".encode()
+            )
+
+            client.close()
+            return
+
+
+        # Check if the username is already being used.
+        if username in clients.values():
+
+            client.send(
+                "Username already taken.\n".encode()
+            )
+
+            client.close()
+            return
+
+
         # Store the client and username.
         clients[client] = username
 
         print(username, "joined the chat.")
 
+
         # Send a welcome message.
-        client.send("Welcome to CipherChat!\n".encode())
+        client.send(
+            "Welcome to CipherChat!\n".encode()
+        )
 
 
         # Keep communicating with this client.
         while True:
 
-            # Receive data from this client.
+            # Receive data from the client.
             data = client.recv(1024)
 
             # Check if the client closed the connection.
@@ -71,8 +121,10 @@ def handle_client(client, address):
                 print(username, "disconnected.")
                 break
 
-            # Add received data to the client's buffer.
+
+            # Add received data to the buffer.
             buffer = buffer + data.decode()
+
 
             # Process complete messages.
             while "\n" in buffer:
@@ -80,31 +132,38 @@ def handle_client(client, address):
                 # Separate one complete message.
                 message, buffer = buffer.split("\n", 1)
 
+
                 # Check if the client wants to leave.
                 if message.lower() == "exit":
+
                     print(username, "left the chat.")
                     return
+
 
                 # Display the message on the server.
                 print(username + ":", message)
 
-                # Create the message that other clients will receive.
+
+                # Create the message for other clients.
                 broadcast_message = username + ": " + message + "\n"
+
 
                 # Send the message to every other client.
                 for other_client in clients:
 
-                    # Don't send the message back to the sender.
+                    # Do not send the message back to the sender.
                     if other_client != client:
 
                         other_client.send(
                             broadcast_message.encode()
                         )
 
+
     except ConnectionResetError:
 
         # Handle an unexpected connection close.
         print(username, "connection was reset.")
+
 
     finally:
 
@@ -122,11 +181,13 @@ while True:
     # Wait for a new client.
     client, address = server.accept()
 
+
     # Create a thread for this client.
     client_thread = threading.Thread(
         target=handle_client,
         args=(client, address)
     )
+
 
     # Start the client thread.
     client_thread.start()
