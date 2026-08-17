@@ -1,5 +1,20 @@
 import socket
 import threading
+import sys
+import os
+
+
+# Add the CipherChat project folder to Python's module search path.
+# This allows server.py to access the database folder.
+PROJECT_ROOT = os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__))
+)
+
+sys.path.append(PROJECT_ROOT)
+
+
+# Import our database functions.
+from database.database import add_user, get_user, check_password
 
 
 # IP address where our server will listen.
@@ -53,94 +68,178 @@ def valid_username(username):
     return True
 
 
-def send_private_message(sender, target_username, message):
-
-    # Search through all connected clients.
-    for client_socket in clients:
-
-        # Get the username belonging to this socket.
-        username = clients[client_socket]
-
-        # Check if this is the requested recipient.
-        if username == target_username:
-
-            # Create the private message.
-            private_message = "[Private] " + sender + ": " + message + "\n"
-
-            # Send the message only to this client.
-            client_socket.send(private_message.encode())
-
-            # Tell the caller that the message was sent.
-            return True
-
-    # Target username was not found.
-    return False
-
-
 def handle_client(client, address):
 
     # Each client has its own message buffer.
     buffer = ""
 
-    # Keep the username empty until validation is completed.
+    # Username remains empty until login/register succeeds.
     username = ""
 
     print("Client connected:", address)
 
     try:
 
-        # Ask the client for a username.
-        client.send("USERNAME?\n".encode())
+        # Ask the client whether they want to register or login.
+        client.send(
+            "REGISTER or LOGIN?\n".encode()
+        )
 
-        # Receive the username.
+        # Receive the selected option.
         data = client.recv(1024)
 
-        # Convert bytes into text.
+        option = data.decode().strip().upper()
+
+
+        # Only REGISTER and LOGIN are accepted.
+        if option not in ["REGISTER", "LOGIN"]:
+
+            client.send(
+                "Invalid option.\n".encode()
+            )
+
+            client.close()
+            return
+
+
+        # Ask for username.
+        client.send(
+            "USERNAME?\n".encode()
+        )
+
+        data = client.recv(1024)
+
         username = data.decode().strip()
 
-        # Check if the username is valid.
+
+        # Validate username.
         if not valid_username(username):
 
             client.send(
-                "Invalid username. Use letters, numbers and underscore only.\n".encode()
+                "Invalid username.\n".encode()
             )
 
             client.close()
             return
 
-        # Check if the username is already being used.
+
+        # Ask for password.
+        client.send(
+            "PASSWORD?\n".encode()
+        )
+
+        data = client.recv(1024)
+
+        password = data.decode().strip()
+
+
+        # -------------------------
+        # REGISTER
+        # -------------------------
+
+        if option == "REGISTER":
+
+            # Add the new user to SQLite.
+            success = add_user(username, password)
+
+            # Check whether registration succeeded.
+            if not success:
+
+                client.send(
+                    "Username already registered.\n".encode()
+                )
+
+                client.close()
+                return
+
+            print(username, "registered successfully.")
+
+
+        # -------------------------
+        # LOGIN
+        # -------------------------
+
+        else:
+
+            # Get the user's stored information.
+            user = get_user(username)
+
+            # Check if the account exists.
+            if user is None:
+
+                client.send(
+                    "User does not exist.\n".encode()
+                )
+
+                client.close()
+                return
+
+
+            # Get stored password information.
+            stored_username = user[0]
+            stored_hash = user[1]
+            salt = user[2]
+
+
+            # Check the password.
+            if not check_password(
+                password,
+                stored_hash,
+                salt
+            ):
+
+                client.send(
+                    "Incorrect password.\n".encode()
+                )
+
+                client.close()
+                return
+
+
+            print(stored_username, "logged in successfully.")
+
+
+        # Check whether this user is already online.
         if username in clients.values():
 
             client.send(
-                "Username already taken.\n".encode()
+                "User is already online.\n".encode()
             )
 
             client.close()
             return
 
-        # Store the client and username.
+
+        # Store the authenticated client.
         clients[client] = username
 
-        print(username, "joined the chat.")
 
-        # Send a welcome message.
+        # Tell the client authentication succeeded.
         client.send(
-            "Welcome to CipherChat!\n".encode()
+            "AUTHENTICATION SUCCESS\n".encode()
         )
 
-        # Keep communicating with this client.
+
+        # -------------------------
+        # CHAT
+        # -------------------------
+
         while True:
 
             # Receive data from the client.
             data = client.recv(1024)
 
+
             # Check if the client closed the connection.
             if data == b"":
+
                 print(username, "disconnected.")
                 break
 
+
             # Add received data to the buffer.
             buffer = buffer + data.decode()
+
 
             # Process complete messages.
             while "\n" in buffer:
@@ -148,73 +247,115 @@ def handle_client(client, address):
                 # Separate one complete message.
                 message, buffer = buffer.split("\n", 1)
 
+
                 # Check if the client wants to leave.
                 if message.lower() == "exit":
+
                     print(username, "left the chat.")
                     return
 
-                # Check if this is a private message.
+
+                # Check for private messaging.
                 if message.startswith("@"):
 
-                    # Split the target username and message.
                     parts = message.split(" ", 1)
+
 
                     # Make sure a message was provided.
                     if len(parts) < 2:
+
                         client.send(
                             "Usage: @username message\n".encode()
                         )
+
                         continue
 
-                    # Remove @ from the username.
+
+                    # Get target username.
                     target_username = parts[0][1:]
 
-                    # Get the actual message.
+
+                    # Get private message.
                     private_text = parts[1]
 
-                    # Send the private message.
-                    sent = send_private_message(
-                        username,
-                        target_username,
-                        private_text
-                    )
 
-                    # Tell the sender if the username was not found.
-                    if not sent:
+                    # Search for the target client.
+                    target_client = None
+
+                    for other_client in clients:
+
+                        if clients[other_client] == target_username:
+
+                            target_client = other_client
+                            break
+
+
+                    # Check if target exists.
+                    if target_client is None:
+
                         client.send(
                             "User not found.\n".encode()
                         )
 
+                        continue
+
+
+                    # Create private message.
+                    private_message = (
+                        "[Private] "
+                        + username
+                        + ": "
+                        + private_text
+                        + "\n"
+                    )
+
+
+                    # Send only to the target.
+                    target_client.send(
+                        private_message.encode()
+                    )
+
+
                 else:
 
-                    # Display normal messages on the server.
+                    # Display normal message.
                     print(username + ":", message)
 
-                    # Create the broadcast message.
-                    broadcast_message = username + ": " + message + "\n"
 
-                    # Send the message to every other client.
+                    # Create broadcast message.
+                    broadcast_message = (
+                        username
+                        + ": "
+                        + message
+                        + "\n"
+                    )
+
+
+                    # Send to every other client.
                     for other_client in clients:
 
-                        # Do not send the message back to the sender.
                         if other_client != client:
 
                             other_client.send(
                                 broadcast_message.encode()
                             )
 
+
     except ConnectionResetError:
 
-        # Handle an unexpected connection close.
+        # Handle unexpected connection close.
         print(username, "connection was reset.")
+
 
     finally:
 
-        # Remove the client from the dictionary.
+        # Remove the client from the online client list.
         if client in clients:
+
             del clients[client]
 
-        # Close the client's socket.
+
+        # Close the socket.
         client.close()
 
 
@@ -224,11 +365,13 @@ while True:
     # Wait for a new client.
     client, address = server.accept()
 
+
     # Create a thread for this client.
     client_thread = threading.Thread(
         target=handle_client,
         args=(client, address)
     )
+
 
     # Start the client thread.
     client_thread.start()

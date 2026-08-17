@@ -20,6 +20,23 @@ client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect((HOST, PORT))
 
 
+# Receive the authentication option request.
+data = client.recv(1024)
+
+# Convert bytes into text.
+message = data.decode()
+
+print(message.strip())
+
+
+# Ask the user to choose REGISTER or LOGIN.
+option = input("Choose: ").strip().upper()
+
+
+# Send the selected option to the server.
+client.send(option.encode())
+
+
 # Receive the username request.
 data = client.recv(1024)
 
@@ -29,15 +46,15 @@ message = data.decode()
 print(message.strip())
 
 
-# Ask the user for a username.
-username = input("Username: ")
+# Ask for username.
+username = input("Username: ").strip()
 
 
-# Send the username to the server.
+# Send the username.
 client.send(username.encode())
 
 
-# Receive the server's response.
+# Receive the password request.
 data = client.recv(1024)
 
 # Convert bytes into text.
@@ -46,13 +63,34 @@ message = data.decode()
 print(message.strip())
 
 
-# Check if the server accepted the username.
-if message.strip() != "Welcome to CipherChat!":
+# Ask for password.
+password = input("Password: ")
 
-    # Close the connection if the username was rejected.
+
+# Send the password.
+client.send(password.encode())
+
+
+# Receive the authentication result.
+data = client.recv(1024)
+
+# Convert bytes into text.
+message = data.decode()
+
+print(message.strip())
+
+
+# Check whether authentication succeeded.
+if message.strip() != "AUTHENTICATION SUCCESS":
+
+    # Authentication failed.
+    print("Authentication failed.")
     client.close()
 
 else:
+
+    print("You are now connected to CipherChat.")
+
 
     def receive_messages():
 
@@ -86,7 +124,7 @@ else:
 
             except ConnectionResetError:
 
-                # Handle an unexpected connection close.
+                # Handle unexpected connection close.
                 print("Server connection was reset.")
                 break
 
@@ -102,7 +140,7 @@ else:
     # Keep asking the user for messages.
     while True:
 
-        # Ask the user for a message.
+        # Ask for a message.
         message = input("You: ")
 
 
