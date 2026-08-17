@@ -10,10 +10,12 @@ DATABASE = "database/cipherchat.db"
 def create_database():
 
     # Connect to the SQLite database.
+    # If the file does not exist, SQLite creates it.
     connection = sqlite3.connect(DATABASE)
 
     # Create a cursor to execute SQL commands.
     cursor = connection.cursor()
+
 
     # Create the users table.
     cursor.execute("""
@@ -25,6 +27,7 @@ def create_database():
         )
     """)
 
+
     # Create the messages table.
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS messages (
@@ -35,8 +38,10 @@ def create_database():
         )
     """)
 
+
     # Save the changes.
     connection.commit()
+
 
     # Close the database connection.
     connection.close()
@@ -48,6 +53,7 @@ def hash_password(password, salt):
     password_bytes = password.encode()
     salt_bytes = salt.encode()
 
+
     # Create a password hash using PBKDF2.
     password_hash = hashlib.pbkdf2_hmac(
         "sha256",
@@ -55,6 +61,7 @@ def hash_password(password, salt):
         salt_bytes,
         100000
     )
+
 
     # Convert the hash into readable hexadecimal text.
     return password_hash.hex()
@@ -65,8 +72,13 @@ def create_password_hash(password):
     # Generate a random salt.
     salt = os.urandom(16).hex()
 
-    # Create the password hash using the salt.
-    password_hash = hash_password(password, salt)
+
+    # Create the password hash.
+    password_hash = hash_password(
+        password,
+        salt
+    )
+
 
     # Return both values.
     return password_hash, salt
@@ -77,11 +89,13 @@ def add_user(username, password):
     # Create a password hash and salt.
     password_hash, salt = create_password_hash(password)
 
+
     # Connect to the database.
     connection = sqlite3.connect(DATABASE)
 
     # Create a cursor.
     cursor = connection.cursor()
+
 
     try:
 
@@ -94,16 +108,20 @@ def add_user(username, password):
             (username, password_hash, salt)
         )
 
+
         # Save the new user.
         connection.commit()
 
+
         # User was successfully created.
         return True
+
 
     except sqlite3.IntegrityError:
 
         # Username already exists.
         return False
+
 
     finally:
 
@@ -119,6 +137,7 @@ def get_user(username):
     # Create a cursor.
     cursor = connection.cursor()
 
+
     # Search for the username.
     cursor.execute(
         """
@@ -129,11 +148,14 @@ def get_user(username):
         (username,)
     )
 
+
     # Get the user information.
     user = cursor.fetchone()
 
+
     # Close the database connection.
     connection.close()
+
 
     # Return the user information.
     return user
@@ -141,14 +163,91 @@ def get_user(username):
 
 def check_password(password, stored_hash, salt):
 
-    # Create a hash from the password entered by the user.
-    new_hash = hash_password(password, salt)
+    # Create a hash from the entered password.
+    new_hash = hash_password(
+        password,
+        salt
+    )
+
 
     # Compare the new hash with the stored hash.
     return new_hash == stored_hash
 
 
-# Create the database and tables.
-create_database()
+def save_message(sender, receiver, message):
 
-print("CipherChat database ready.")
+    # Connect to the database.
+    connection = sqlite3.connect(DATABASE)
+
+    # Create a cursor.
+    cursor = connection.cursor()
+
+
+    # Store the message.
+    #
+    # receiver can be:
+    # None -> broadcast message
+    # username -> private message
+    cursor.execute(
+        """
+        INSERT INTO messages (sender, receiver, message)
+        VALUES (?, ?, ?)
+        """,
+        (sender, receiver, message)
+    )
+
+
+    # Save the message.
+    connection.commit()
+
+
+    # Close the database connection.
+    connection.close()
+
+    
+def get_messages(username):
+
+    # Connect to the database.
+    connection = sqlite3.connect(DATABASE)
+
+    # Create a cursor.
+    cursor = connection.cursor()
+
+
+    # Get recent messages involving this user.
+    cursor.execute(
+        """
+        SELECT sender, receiver, message
+        FROM messages
+        WHERE receiver IS NULL
+        OR sender = ?
+        OR receiver = ?
+        ORDER BY id DESC
+        LIMIT 10
+        """,
+        (username, username)
+    )
+
+
+    # Get the messages.
+    messages = cursor.fetchall()
+
+
+    # Close the database connection.
+    connection.close()
+
+
+    # Reverse the list so the oldest message appears first.
+    messages.reverse()
+
+
+    # Return the messages.
+    return messages
+
+# Only create the database when this file
+# is executed directly.
+if __name__ == "__main__":
+
+    create_database()
+
+    print("CipherChat database ready.")

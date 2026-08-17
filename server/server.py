@@ -4,17 +4,27 @@ import sys
 import os
 
 
-# Add the CipherChat project folder to Python's module search path.
-# This allows server.py to access the database folder.
+# Get the CipherChat project folder.
 PROJECT_ROOT = os.path.dirname(
     os.path.dirname(os.path.abspath(__file__))
 )
 
+# Get the server folder.
+SERVER_FOLDER = os.path.dirname(
+    os.path.abspath(__file__)
+)
+
+
+# Add both folders to Python's module search path.
 sys.path.append(PROJECT_ROOT)
+sys.path.append(SERVER_FOLDER)
 
 
-# Import our database functions.
-from database.database import add_user, get_user, check_password
+# Import authentication functions.
+from auth import register_user, login_user
+
+# Import the database function for saving messages.
+from database.database import save_message, get_messages
 
 
 # IP address where our server will listen.
@@ -46,26 +56,6 @@ print("Waiting for clients...")
 # Format:
 # socket -> username
 clients = {}
-
-
-def valid_username(username):
-
-    # Username cannot be empty.
-    if username == "":
-        return False
-
-    # Username cannot be longer than 20 characters.
-    if len(username) > 20:
-        return False
-
-    # Check every character.
-    for character in username:
-
-        # Allow letters, numbers and underscore.
-        if not (character.isalnum() or character == "_"):
-            return False
-
-    return True
 
 
 def handle_client(client, address):
@@ -112,17 +102,6 @@ def handle_client(client, address):
         username = data.decode().strip()
 
 
-        # Validate username.
-        if not valid_username(username):
-
-            client.send(
-                "Invalid username.\n".encode()
-            )
-
-            client.close()
-            return
-
-
         # Ask for password.
         client.send(
             "PASSWORD?\n".encode()
@@ -139,14 +118,17 @@ def handle_client(client, address):
 
         if option == "REGISTER":
 
-            # Add the new user to SQLite.
-            success = add_user(username, password)
+            # Use the authentication module.
+            success = register_user(
+                username,
+                password
+            )
 
-            # Check whether registration succeeded.
+            # Check registration result.
             if not success:
 
                 client.send(
-                    "Username already registered.\n".encode()
+                    "Registration failed.\n".encode()
                 )
 
                 client.close()
@@ -161,42 +143,23 @@ def handle_client(client, address):
 
         else:
 
-            # Get the user's stored information.
-            user = get_user(username)
+            # Use the authentication module.
+            success = login_user(
+                username,
+                password
+            )
 
-            # Check if the account exists.
-            if user is None:
+            # Check login result.
+            if not success:
 
                 client.send(
-                    "User does not exist.\n".encode()
+                    "Login failed.\n".encode()
                 )
 
                 client.close()
                 return
 
-
-            # Get stored password information.
-            stored_username = user[0]
-            stored_hash = user[1]
-            salt = user[2]
-
-
-            # Check the password.
-            if not check_password(
-                password,
-                stored_hash,
-                salt
-            ):
-
-                client.send(
-                    "Incorrect password.\n".encode()
-                )
-
-                client.close()
-                return
-
-
-            print(stored_username, "logged in successfully.")
+            print(username, "logged in successfully.")
 
 
         # Check whether this user is already online.
@@ -219,6 +182,49 @@ def handle_client(client, address):
             "AUTHENTICATION SUCCESS\n".encode()
         )
 
+        # Get the user's recent message history.
+        history = get_messages(username)
+
+
+# Send a history header.
+        client.send(
+    "--- Recent Messages ---\n".encode()
+)
+
+
+# Send each previous message to the client.
+        for sender, receiver, message in history:
+
+    # Private message.
+          if receiver is not None:
+
+            history_message = (
+            "[Private] "
+            + sender
+            + ": "
+            + message
+            + "\n"
+        )
+
+    # Broadcast message.
+          else:
+
+            history_message = (
+             sender
+            + ": "
+            + message
+            + "\n"
+        )
+
+
+    # Send the history message.
+          client.send(history_message.encode())
+
+
+# Mark the end of the history.
+        client.send(
+    "--- End of History ---\n".encode()
+)
 
         # -------------------------
         # CHAT
@@ -255,7 +261,10 @@ def handle_client(client, address):
                     return
 
 
-                # Check for private messaging.
+                # -------------------------
+                # PRIVATE MESSAGE
+                # -------------------------
+
                 if message.startswith("@"):
 
                     parts = message.split(" ", 1)
@@ -300,6 +309,14 @@ def handle_client(client, address):
                         continue
 
 
+                    # Save the private message to SQLite.
+                    save_message(
+                        username,
+                        target_username,
+                        private_text
+                    )
+
+
                     # Create private message.
                     private_message = (
                         "[Private] "
@@ -316,10 +333,22 @@ def handle_client(client, address):
                     )
 
 
+                # -------------------------
+                # BROADCAST MESSAGE
+                # -------------------------
+
                 else:
 
                     # Display normal message.
                     print(username + ":", message)
+
+
+                    # Save the broadcast message to SQLite.
+                    save_message(
+                        username,
+                        None,
+                        message
+                    )
 
 
                     # Create broadcast message.
