@@ -1,60 +1,122 @@
 import sqlite3
 import hashlib
 import os
+from datetime import datetime
 
 
-# Location of our SQLite database file.
+# Location of our SQLite database.
 DATABASE = "database/cipherchat.db"
 
 
 def create_database():
 
-    # Connect to the SQLite database.
-    # If the file does not exist, SQLite creates it.
+    # Connect to SQLite.
     connection = sqlite3.connect(DATABASE)
 
-    # Create a cursor to execute SQL commands.
+    # Cursor lets us execute SQL commands.
     cursor = connection.cursor()
 
 
-    # Create the users table.
+    # -------------------------
+    # USERS
+    # -------------------------
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
+            email TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
-            salt TEXT NOT NULL
+            salt TEXT NOT NULL,
+            created_at TEXT NOT NULL
         )
     """)
 
 
-    # Create the messages table.
+    # -------------------------
+    # ROOMS
+    # -------------------------
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS rooms (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            room_code TEXT UNIQUE NOT NULL,
+            room_name TEXT NOT NULL,
+            owner_id INTEGER NOT NULL,
+            room_type TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+
+            FOREIGN KEY (owner_id)
+            REFERENCES users(id)
+        )
+    """)
+
+
+    # -------------------------
+    # ROOM MEMBERS
+    # -------------------------
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS room_members (
+            room_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            role TEXT NOT NULL,
+
+            PRIMARY KEY (room_id, user_id),
+
+            FOREIGN KEY (room_id)
+            REFERENCES rooms(id),
+
+            FOREIGN KEY (user_id)
+            REFERENCES users(id)
+        )
+    """)
+
+
+    # -------------------------
+    # MESSAGES
+    # -------------------------
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sender TEXT NOT NULL,
-            receiver TEXT,
-            message TEXT NOT NULL
+            sender_id INTEGER NOT NULL,
+            receiver_id INTEGER,
+            room_id INTEGER,
+            message TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+
+            FOREIGN KEY (sender_id)
+            REFERENCES users(id),
+
+            FOREIGN KEY (receiver_id)
+            REFERENCES users(id),
+
+            FOREIGN KEY (room_id)
+            REFERENCES rooms(id)
         )
     """)
 
 
-    # Save the changes.
+    # Save changes.
     connection.commit()
 
-
-    # Close the database connection.
+    # Close database.
     connection.close()
 
 
+# -------------------------
+# PASSWORD FUNCTIONS
+# -------------------------
+
 def hash_password(password, salt):
 
-    # Convert the password and salt into bytes.
+    # Convert password and salt to bytes.
     password_bytes = password.encode()
     salt_bytes = salt.encode()
 
 
-    # Create a password hash using PBKDF2.
+    # Create a PBKDF2 password hash.
     password_hash = hashlib.pbkdf2_hmac(
         "sha256",
         password_bytes,
@@ -63,7 +125,7 @@ def hash_password(password, salt):
     )
 
 
-    # Convert the hash into readable hexadecimal text.
+    # Return readable hexadecimal hash.
     return password_hash.hex()
 
 
@@ -72,180 +134,110 @@ def create_password_hash(password):
     # Generate a random salt.
     salt = os.urandom(16).hex()
 
-
-    # Create the password hash.
+    # Create hash using the salt.
     password_hash = hash_password(
         password,
         salt
     )
 
-
-    # Return both values.
     return password_hash, salt
 
 
-def add_user(username, password):
+# -------------------------
+# USER FUNCTIONS
+# -------------------------
 
-    # Create a password hash and salt.
+def add_user(username, email, password):
+
+    # Create password hash and salt.
     password_hash, salt = create_password_hash(password)
 
+    # Current time.
+    created_at = datetime.now().isoformat()
 
-    # Connect to the database.
+    # Connect to database.
     connection = sqlite3.connect(DATABASE)
 
-    # Create a cursor.
     cursor = connection.cursor()
-
 
     try:
 
-        # Store the username, hash and salt.
+        # Store the new user.
         cursor.execute(
             """
-            INSERT INTO users (username, password_hash, salt)
-            VALUES (?, ?, ?)
+            INSERT INTO users
+            (username, email, password_hash, salt, created_at)
+            VALUES (?, ?, ?, ?, ?)
             """,
-            (username, password_hash, salt)
+            (
+                username,
+                email,
+                password_hash,
+                salt,
+                created_at
+            )
         )
 
-
-        # Save the new user.
         connection.commit()
 
-
-        # User was successfully created.
         return True
-
 
     except sqlite3.IntegrityError:
 
-        # Username already exists.
+        # Username or email already exists.
         return False
-
 
     finally:
 
-        # Close the database connection.
         connection.close()
 
 
 def get_user(username):
 
-    # Connect to the database.
+    # Connect to database.
     connection = sqlite3.connect(DATABASE)
 
-    # Create a cursor.
     cursor = connection.cursor()
 
-
-    # Search for the username.
+    # Find the user.
     cursor.execute(
         """
-        SELECT username, password_hash, salt
+        SELECT
+            id,
+            username,
+            email,
+            password_hash,
+            salt
         FROM users
         WHERE username = ?
         """,
         (username,)
     )
 
-
-    # Get the user information.
     user = cursor.fetchone()
 
-
-    # Close the database connection.
     connection.close()
 
-
-    # Return the user information.
     return user
 
 
 def check_password(password, stored_hash, salt):
 
-    # Create a hash from the entered password.
+    # Hash the entered password using
+    # the stored salt.
     new_hash = hash_password(
         password,
         salt
     )
 
-
-    # Compare the new hash with the stored hash.
+    # Compare both hashes.
     return new_hash == stored_hash
 
 
-def save_message(sender, receiver, message):
+# -------------------------
+# DATABASE INITIALIZATION
+# -------------------------
 
-    # Connect to the database.
-    connection = sqlite3.connect(DATABASE)
-
-    # Create a cursor.
-    cursor = connection.cursor()
-
-
-    # Store the message.
-    #
-    # receiver can be:
-    # None -> broadcast message
-    # username -> private message
-    cursor.execute(
-        """
-        INSERT INTO messages (sender, receiver, message)
-        VALUES (?, ?, ?)
-        """,
-        (sender, receiver, message)
-    )
-
-
-    # Save the message.
-    connection.commit()
-
-
-    # Close the database connection.
-    connection.close()
-
-    
-def get_messages(username):
-
-    # Connect to the database.
-    connection = sqlite3.connect(DATABASE)
-
-    # Create a cursor.
-    cursor = connection.cursor()
-
-
-    # Get recent messages involving this user.
-    cursor.execute(
-        """
-        SELECT sender, receiver, message
-        FROM messages
-        WHERE receiver IS NULL
-        OR sender = ?
-        OR receiver = ?
-        ORDER BY id DESC
-        LIMIT 10
-        """,
-        (username, username)
-    )
-
-
-    # Get the messages.
-    messages = cursor.fetchall()
-
-
-    # Close the database connection.
-    connection.close()
-
-
-    # Reverse the list so the oldest message appears first.
-    messages.reverse()
-
-
-    # Return the messages.
-    return messages
-
-# Only create the database when this file
-# is executed directly.
 if __name__ == "__main__":
 
     create_database()
