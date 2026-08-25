@@ -11,44 +11,75 @@ def valid_username(username):
     if len(username) > 20:
         return False
 
-    # Check every character.
+    # Allow only letters, numbers and underscore.
     for character in username:
 
-        # Allow letters, numbers and underscore.
         if not (character.isalnum() or character == "_"):
             return False
 
     return True
 
 
-def register_user(username, password):
+def valid_email(email):
 
-    # Check whether the username follows our rules.
+    # Basic email validation.
+    # We are keeping this simple for now.
+    if "@" not in email:
+        return False
+
+    if "." not in email:
+        return False
+
+    return True
+
+
+def register_user(username, email, password):
+
+    # Validate the username.
     if not valid_username(username):
         return False
 
-    # Add the user to SQLite.
-    return add_user(username, password)
+    # Validate the email.
+    if not valid_email(email):
+        return False
+
+    # Password cannot be empty.
+    if password == "":
+        return False
+
+    # Store the user in SQLite.
+    return add_user(
+        username,
+        email,
+        password
+    )
 
 
 def login_user(username, password):
 
-    # Check whether the username follows our rules.
+    # Validate the username.
     if not valid_username(username):
         return False
 
-    # Find the user in SQLite.
+    # Find the user.
     user = get_user(username)
 
     # User does not exist.
     if user is None:
         return False
 
-    # Get stored password information.
-    stored_hash = user[1]
-    salt = user[2]
+    # Database structure:
+    #
+    # user[0] = id
+    # user[1] = username
+    # user[2] = email
+    # user[3] = password_hash
+    # user[4] = salt
 
-    # Check whether the password is correct.
+    stored_hash = user[3]
+    salt = user[4]
+
+    # Verify the password.
     return check_password(
         password,
         stored_hash,

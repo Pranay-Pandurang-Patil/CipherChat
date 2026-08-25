@@ -13,7 +13,6 @@ def create_database():
     # Connect to SQLite.
     connection = sqlite3.connect(DATABASE)
 
-    # Cursor lets us execute SQL commands.
     cursor = connection.cursor()
 
 
@@ -98,10 +97,8 @@ def create_database():
     """)
 
 
-    # Save changes.
     connection.commit()
 
-    # Close database.
     connection.close()
 
 
@@ -111,12 +108,12 @@ def create_database():
 
 def hash_password(password, salt):
 
-    # Convert password and salt to bytes.
+    # Convert password and salt into bytes.
     password_bytes = password.encode()
     salt_bytes = salt.encode()
 
 
-    # Create a PBKDF2 password hash.
+    # Create PBKDF2 password hash.
     password_hash = hashlib.pbkdf2_hmac(
         "sha256",
         password_bytes,
@@ -125,20 +122,22 @@ def hash_password(password, salt):
     )
 
 
-    # Return readable hexadecimal hash.
+    # Convert hash to hexadecimal text.
     return password_hash.hex()
 
 
 def create_password_hash(password):
 
-    # Generate a random salt.
+    # Generate random salt.
     salt = os.urandom(16).hex()
 
-    # Create hash using the salt.
+
+    # Create password hash.
     password_hash = hash_password(
         password,
         salt
     )
+
 
     return password_hash, salt
 
@@ -152,17 +151,18 @@ def add_user(username, email, password):
     # Create password hash and salt.
     password_hash, salt = create_password_hash(password)
 
-    # Current time.
+    # Get current time.
     created_at = datetime.now().isoformat()
 
-    # Connect to database.
+
     connection = sqlite3.connect(DATABASE)
 
     cursor = connection.cursor()
 
+
     try:
 
-        # Store the new user.
+        # Store user.
         cursor.execute(
             """
             INSERT INTO users
@@ -178,14 +178,17 @@ def add_user(username, email, password):
             )
         )
 
+
         connection.commit()
 
         return True
+
 
     except sqlite3.IntegrityError:
 
         # Username or email already exists.
         return False
+
 
     finally:
 
@@ -194,12 +197,12 @@ def add_user(username, email, password):
 
 def get_user(username):
 
-    # Connect to database.
     connection = sqlite3.connect(DATABASE)
 
     cursor = connection.cursor()
 
-    # Find the user.
+
+    # Get user information.
     cursor.execute(
         """
         SELECT
@@ -214,6 +217,7 @@ def get_user(username):
         (username,)
     )
 
+
     user = cursor.fetchone()
 
     connection.close()
@@ -223,15 +227,222 @@ def get_user(username):
 
 def check_password(password, stored_hash, salt):
 
-    # Hash the entered password using
-    # the stored salt.
+    # Hash entered password using stored salt.
     new_hash = hash_password(
         password,
         salt
     )
 
-    # Compare both hashes.
+
+    # Compare hashes.
     return new_hash == stored_hash
+
+
+# -------------------------
+# MESSAGE FUNCTIONS
+# -------------------------
+
+def get_user_id(username):
+
+    # Connect to database.
+    connection = sqlite3.connect(DATABASE)
+
+    cursor = connection.cursor()
+
+
+    # Find user ID from username.
+    cursor.execute(
+        """
+        SELECT id
+        FROM users
+        WHERE username = ?
+        """,
+        (username,)
+    )
+
+
+    result = cursor.fetchone()
+
+    connection.close()
+
+
+    # Return ID if user exists.
+    if result is not None:
+        return result[0]
+
+    return None
+
+
+def save_message(sender_username, receiver_username, message):
+
+    # Find sender ID.
+    sender_id = get_user_id(
+        sender_username
+    )
+
+
+    # Find receiver ID if this is a private message.
+    receiver_id = None
+
+    if receiver_username is not None:
+
+        receiver_id = get_user_id(
+            receiver_username
+        )
+
+
+    # If sender doesn't exist, don't save.
+    if sender_id is None:
+        return
+
+
+    # Current time.
+    created_at = datetime.now().isoformat()
+
+
+    connection = sqlite3.connect(DATABASE)
+
+    cursor = connection.cursor()
+
+
+    # Store the message.
+    #
+    # room_id is NULL for now.
+    # We'll use it when room chat is implemented.
+    cursor.execute(
+        """
+        INSERT INTO messages
+        (
+            sender_id,
+            receiver_id,
+            room_id,
+            message,
+            created_at
+        )
+        VALUES (?, ?, NULL, ?, ?)
+        """,
+        (
+            sender_id,
+            receiver_id,
+            message,
+            created_at
+        )
+    )
+
+
+    connection.commit()
+
+    connection.close()
+
+
+def get_messages(username):
+
+    # Find the user's ID.
+    user_id = get_user_id(username)
+
+
+    if user_id is None:
+        return []
+
+
+    connection = sqlite3.connect(DATABASE)
+
+    cursor = connection.cursor()
+
+
+    # Get recent messages involving this user.
+    #
+    # Broadcast:
+    # receiver_id IS NULL
+    #
+    # Private:
+    # sender_id = user
+    # OR receiver_id = user
+    cursor.execute(
+        """
+        SELECT
+            sender_id,
+            receiver_id,
+            message
+        FROM messages
+        WHERE
+            receiver_id IS NULL
+            OR sender_id = ?
+            OR receiver_id = ?
+        ORDER BY id DESC
+        LIMIT 10
+        """,
+        (
+            user_id,
+            user_id
+        )
+    )
+
+
+    rows = cursor.fetchall()
+
+    connection.close()
+
+
+    # Convert IDs back into usernames.
+    messages = []
+
+
+    for sender_id, receiver_id, message in rows:
+
+        # Get sender username.
+        connection = sqlite3.connect(DATABASE)
+
+        cursor = connection.cursor()
+
+        cursor.execute(
+            "SELECT username FROM users WHERE id = ?",
+            (sender_id,)
+        )
+
+        sender_result = cursor.fetchone()
+
+
+        # Get receiver username.
+        receiver_result = None
+
+        if receiver_id is not None:
+
+            cursor.execute(
+                "SELECT username FROM users WHERE id = ?",
+                (receiver_id,)
+            )
+
+            receiver_result = cursor.fetchone()
+
+
+        connection.close()
+
+
+        # Convert database IDs to usernames.
+        sender = sender_result[0]
+
+        receiver = None
+
+        if receiver_result is not None:
+            receiver = receiver_result[0]
+
+
+        messages.append(
+            (
+                sender,
+                receiver,
+                message
+            )
+        )
+
+
+    # We retrieved newest first.
+    # Reverse so oldest appears first.
+    messages.reverse()
+
+
+    return messages
 
 
 # -------------------------
