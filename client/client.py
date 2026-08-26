@@ -13,17 +13,21 @@ PORT = 5000
 # Create a TCP socket.
 # AF_INET = IPv4
 # SOCK_STREAM = TCP
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client = socket.socket(
+    socket.AF_INET,
+    socket.SOCK_STREAM
+)
 
 
 # Connect to the server.
-client.connect((HOST, PORT))
+client.connect(
+    (HOST, PORT)
+)
 
 
 # Receive the authentication option request.
 data = client.recv(1024)
 
-# Convert bytes into text.
 message = data.decode()
 
 print(message.strip())
@@ -33,14 +37,15 @@ print(message.strip())
 option = input("Choose: ").strip().upper()
 
 
-# Send the selected option to the server.
-client.send(option.encode())
+# Send the selected option.
+client.send(
+    option.encode()
+)
 
 
-# Receive the username request.
+# Receive username request.
 data = client.recv(1024)
 
-# Convert bytes into text.
 message = data.decode()
 
 print(message.strip())
@@ -50,14 +55,43 @@ print(message.strip())
 username = input("Username: ").strip()
 
 
-# Send the username.
-client.send(username.encode())
+# Send username.
+client.send(
+    username.encode()
+)
 
 
-# Receive the password request.
+# -------------------------
+# EMAIL
+# -------------------------
+
+if option == "REGISTER":
+
+    # Receive email request.
+    data = client.recv(1024)
+
+    message = data.decode()
+
+    print(message.strip())
+
+
+    # Ask for email.
+    email = input("Email: ").strip()
+
+
+    # Send email.
+    client.send(
+        email.encode()
+    )
+
+
+# -------------------------
+# PASSWORD
+# -------------------------
+
+# Receive password request.
 data = client.recv(1024)
 
-# Convert bytes into text.
 message = data.decode()
 
 print(message.strip())
@@ -67,69 +101,95 @@ print(message.strip())
 password = input("Password: ")
 
 
-# Send the password.
-client.send(password.encode())
+# Send password.
+client.send(
+    password.encode()
+)
 
 
-# Receive the authentication result.
+# Receive authentication result.
 data = client.recv(1024)
 
-# Convert bytes into text.
 message = data.decode()
 
 print(message.strip())
 
 
-# Check whether authentication succeeded.
+# Check authentication.
 if message.strip() != "AUTHENTICATION SUCCESS":
 
-    # Authentication failed.
     print("Authentication failed.")
+
     client.close()
+
 
 else:
 
-    print("You are now connected to CipherChat.")
+    print(
+        "You are now connected to CipherChat."
+    )
 
+
+    # -------------------------
+    # RECEIVE MESSAGES
+    # -------------------------
 
     def receive_messages():
 
-        # Store data that has not formed a complete message yet.
+        # Buffer for incomplete messages.
         buffer = ""
 
-        # Keep waiting for messages from the server.
+
         while True:
 
             try:
 
-                # Receive data from the server.
+                # Receive data from server.
                 data = client.recv(1024)
 
-                # Check if the server closed the connection.
+
+                # Server closed connection.
                 if data == b"":
-                    print("Server disconnected.")
+
+                    print(
+                        "Server disconnected."
+                    )
+
                     break
 
-                # Add received data to the buffer.
-                buffer = buffer + data.decode()
+
+                # Add data to buffer.
+                buffer = (
+                    buffer
+                    + data.decode()
+                )
+
 
                 # Process complete messages.
                 while "\n" in buffer:
 
-                    # Separate one complete message.
-                    message, buffer = buffer.split("\n", 1)
+                    message, buffer = (
+                        buffer.split(
+                            "\n",
+                            1
+                        )
+                    )
 
-                    # Display the message.
+
+                    # Display message.
                     print(message)
+
 
             except ConnectionResetError:
 
-                # Handle unexpected connection close.
-                print("Server connection was reset.")
+                print(
+                    "Server connection was reset."
+                )
+
                 break
 
 
-    # Start the receiving thread.
+    # Start receiving thread.
     receive_thread = threading.Thread(
         target=receive_messages
     )
@@ -137,31 +197,37 @@ else:
     receive_thread.start()
 
 
-    # Keep asking the user for messages.
+    # -------------------------
+    # SEND MESSAGES
+    # -------------------------
+
     while True:
 
-        # Ask for a message.
+        # Ask user for message.
         message = input("You: ")
 
 
-        # Add the message delimiter.
+        # Add message delimiter.
         message = message + "\n"
 
 
-        # Convert the message into bytes.
+        # Convert to bytes.
         data = message.encode()
 
 
-        # Send the message to the server.
+        # Send message.
         client.send(data)
 
 
-        # Check if the user wants to exit.
+        # Exit chat.
         if message.strip().lower() == "exit":
 
-            print("Closing connection...")
+            print(
+                "Closing connection..."
+            )
+
             break
 
 
-    # Close the connection.
+    # Close socket.
     client.close()

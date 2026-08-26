@@ -19,19 +19,32 @@ def valid_username(username):
 
     return True
 
-
 def valid_email(email):
 
-    # Basic email validation.
-    # We are keeping this simple for now.
-    if "@" not in email:
+    # Email must contain exactly one @ symbol.
+    if email.count("@") != 1:
         return False
 
-    if "." not in email:
+    # Separate the username and domain.
+    username, domain = email.split("@")
+
+    # Both parts must contain something.
+    if username == "" or domain == "":
+        return False
+
+    # Domain should contain a dot.
+    if "." not in domain:
+        return False
+
+    # Dot cannot be the first or last character of the domain.
+    if domain.startswith(".") or domain.endswith("."):
+        return False
+
+    # The email should not contain spaces.
+    if " " in email:
         return False
 
     return True
-
 
 def register_user(username, email, password):
 
