@@ -3,7 +3,7 @@ import hashlib
 import os
 from datetime import datetime
 
-
+import random
 # Location of our SQLite database.
 DATABASE = "database/cipherchat.db"
 
@@ -444,7 +444,221 @@ def get_messages(username):
 
     return messages
 
+def create_room(username, room_name, room_type):
 
+    # Find the owner's user ID.
+    owner_id = get_user_id(username)
+
+    # The owner must exist.
+    if owner_id is None:
+        return None
+
+
+    # Generate a unique 6-digit room code.
+    while True:
+
+        room_code = str(
+            random.randint(100000, 999999)
+        )
+
+        connection = sqlite3.connect(DATABASE)
+
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            SELECT id
+            FROM rooms
+            WHERE room_code = ?
+            """,
+            (room_code,)
+        )
+
+        existing_room = cursor.fetchone()
+
+        connection.close()
+
+
+        # Stop if the code is not already used.
+        if existing_room is None:
+            break
+
+
+    # Get current time.
+    created_at = datetime.now().isoformat()
+
+
+    # Connect to database.
+    connection = sqlite3.connect(DATABASE)
+
+    cursor = connection.cursor()
+
+
+    # Create the room.
+    cursor.execute(
+        """
+        INSERT INTO rooms
+        (
+            room_code,
+            room_name,
+            owner_id,
+            room_type,
+            created_at
+        )
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (
+            room_code,
+            room_name,
+            owner_id,
+            room_type,
+            created_at
+        )
+    )
+
+
+    # Get the newly created room ID.
+    room_id = cursor.lastrowid
+
+
+    # Add the owner as the first room member.
+    cursor.execute(
+        """
+        INSERT INTO room_members
+        (
+            room_id,
+            user_id,
+            role
+        )
+        VALUES (?, ?, ?)
+        """,
+        (
+            room_id,
+            owner_id,
+            "owner"
+        )
+    )
+
+
+    # Save changes.
+    connection.commit()
+
+    connection.close()
+
+
+    # Return the room code.
+    return room_code
+def join_room(username, room_code):
+
+    # Find the user's ID.
+    user_id = get_user_id(username)
+
+    # User must exist.
+    if user_id is None:
+        return False
+
+
+    # Connect to database.
+    connection = sqlite3.connect(DATABASE)
+
+    cursor = connection.cursor()
+
+
+    # Find the room.
+    cursor.execute(
+        """
+        SELECT id
+        FROM rooms
+        WHERE room_code = ?
+        """,
+        (room_code,)
+    )
+
+    room = cursor.fetchone()
+
+
+    # Room does not exist.
+    if room is None:
+
+        connection.close()
+
+        return False
+
+
+    room_id = room[0]
+
+
+    # Check whether the user is already a member.
+    cursor.execute(
+        """
+        SELECT user_id
+        FROM room_members
+        WHERE room_id = ?
+        AND user_id = ?
+        """,
+        (
+            room_id,
+            user_id
+        )
+    )
+
+    existing_member = cursor.fetchone()
+
+
+    if existing_member is not None:
+
+        connection.close()
+
+        return False
+
+
+    # Count current room members.
+    cursor.execute(
+        """
+        SELECT COUNT(*)
+        FROM room_members
+        WHERE room_id = ?
+        """,
+        (room_id,)
+    )
+
+    member_count = cursor.fetchone()[0]
+
+
+    # Maximum room size is 10.
+    if member_count >= 10:
+
+        connection.close()
+
+        return False
+
+
+    # Add the user to the room.
+    cursor.execute(
+        """
+        INSERT INTO room_members
+        (
+            room_id,
+            user_id,
+            role
+        )
+        VALUES (?, ?, ?)
+        """,
+        (
+            room_id,
+            user_id,
+            "member"
+        )
+    )
+
+
+    # Save the change.
+    connection.commit()
+
+    connection.close()
+
+
+    return True
 # -------------------------
 # DATABASE INITIALIZATION
 # -------------------------

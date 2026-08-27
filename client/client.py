@@ -25,30 +25,28 @@ client.connect(
 )
 
 
-# Receive the authentication option request.
+# -------------------------
+# AUTHENTICATION
+# -------------------------
+
+# Receive authentication option request.
 data = client.recv(1024)
 
-message = data.decode()
-
-print(message.strip())
+print(data.decode().strip())
 
 
-# Ask the user to choose REGISTER or LOGIN.
+# Ask user to choose REGISTER or LOGIN.
 option = input("Choose: ").strip().upper()
 
 
-# Send the selected option.
-client.send(
-    option.encode()
-)
+# Send option to server.
+client.send(option.encode())
 
 
 # Receive username request.
 data = client.recv(1024)
 
-message = data.decode()
-
-print(message.strip())
+print(data.decode().strip())
 
 
 # Ask for username.
@@ -56,9 +54,7 @@ username = input("Username: ").strip()
 
 
 # Send username.
-client.send(
-    username.encode()
-)
+client.send(username.encode())
 
 
 # -------------------------
@@ -70,9 +66,7 @@ if option == "REGISTER":
     # Receive email request.
     data = client.recv(1024)
 
-    message = data.decode()
-
-    print(message.strip())
+    print(data.decode().strip())
 
 
     # Ask for email.
@@ -80,9 +74,7 @@ if option == "REGISTER":
 
 
     # Send email.
-    client.send(
-        email.encode()
-    )
+    client.send(email.encode())
 
 
 # -------------------------
@@ -92,9 +84,7 @@ if option == "REGISTER":
 # Receive password request.
 data = client.recv(1024)
 
-message = data.decode()
-
-print(message.strip())
+print(data.decode().strip())
 
 
 # Ask for password.
@@ -102,21 +92,23 @@ password = input("Password: ")
 
 
 # Send password.
-client.send(
-    password.encode()
-)
+client.send(password.encode())
 
 
 # Receive authentication result.
 data = client.recv(1024)
 
-message = data.decode()
-
-print(message.strip())
+message = data.decode().strip()
 
 
-# Check authentication.
-if message.strip() != "AUTHENTICATION SUCCESS":
+print(message)
+
+
+# -------------------------
+# AUTHENTICATION CHECK
+# -------------------------
+
+if message != "AUTHENTICATION SUCCESS":
 
     print("Authentication failed.")
 
@@ -131,12 +123,69 @@ else:
 
 
     # -------------------------
-    # RECEIVE MESSAGES
+    # RECEIVE HISTORY
+    # -------------------------
+
+    # The server sends the message history
+    # immediately after authentication.
+    #
+    # We receive the history BEFORE starting
+    # the background receiving thread.
+
+    history = ""
+
+    while True:
+
+        # Receive data from the server.
+        data = client.recv(1024)
+
+
+        # Server disconnected.
+        if data == b"":
+
+            print("Server disconnected.")
+
+            client.close()
+
+            break
+
+
+        # Add received data to our buffer.
+        history = history + data.decode()
+
+
+        # Process complete lines.
+        while "\n" in history:
+
+            line, history = history.split(
+                "\n",
+                1
+            )
+
+
+            # Display the line.
+            print(line)
+
+
+            # Stop when history is finished.
+            if line == "--- End of History ---":
+
+                break
+
+
+        # Check if the history ended.
+        if line == "--- End of History ---":
+
+            break
+
+
+    # -------------------------
+    # RECEIVE NEW MESSAGES
     # -------------------------
 
     def receive_messages():
 
-        # Buffer for incomplete messages.
+        # Buffer for incoming data.
         buffer = ""
 
 
@@ -144,11 +193,11 @@ else:
 
             try:
 
-                # Receive data from server.
+                # Receive data from the server.
                 data = client.recv(1024)
 
 
-                # Server closed connection.
+                # Server disconnected.
                 if data == b"":
 
                     print(
@@ -158,11 +207,8 @@ else:
                     break
 
 
-                # Add data to buffer.
-                buffer = (
-                    buffer
-                    + data.decode()
-                )
+                # Add data to the buffer.
+                buffer = buffer + data.decode()
 
 
                 # Process complete messages.
@@ -176,7 +222,7 @@ else:
                     )
 
 
-                    # Display message.
+                    # Display received message.
                     print(message)
 
 
@@ -189,11 +235,13 @@ else:
                 break
 
 
-    # Start receiving thread.
+    # Create receiving thread.
     receive_thread = threading.Thread(
         target=receive_messages
     )
 
+
+    # Start receiving thread.
     receive_thread.start()
 
 
@@ -203,15 +251,15 @@ else:
 
     while True:
 
-        # Ask user for message.
+        # Ask user for a message.
         message = input("You: ")
 
 
-        # Add message delimiter.
+        # Add newline delimiter.
         message = message + "\n"
 
 
-        # Convert to bytes.
+        # Convert message to bytes.
         data = message.encode()
 
 
@@ -219,7 +267,7 @@ else:
         client.send(data)
 
 
-        # Exit chat.
+        # Check for exit.
         if message.strip().lower() == "exit":
 
             print(
@@ -229,5 +277,5 @@ else:
             break
 
 
-    # Close socket.
+    # Close the connection.
     client.close()
