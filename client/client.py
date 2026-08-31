@@ -2,273 +2,537 @@ import socket
 import threading
 
 
-# IP address of the computer where our server is running.
-# 127.0.0.1 means our own computer.
-HOST = "127.0.0.1"
+# =========================================================
+# SERVER SETTINGS
+# =========================================================
 
-# This must match the server's port.
+HOST = "127.0.0.1"
 PORT = 5000
 
 
-# Create a TCP socket.
-# AF_INET = IPv4
-# SOCK_STREAM = TCP
+# =========================================================
+# CREATE SOCKET
+# =========================================================
+
 client = socket.socket(
     socket.AF_INET,
     socket.SOCK_STREAM
 )
 
 
-# Connect to the server.
+# Connect to server.
 client.connect(
     (HOST, PORT)
 )
 
 
-# -------------------------
-# AUTHENTICATION
-# -------------------------
+# =========================================================
+# RECEIVE BUFFER
+# =========================================================
 
-# Receive authentication option request.
-data = client.recv(1024)
-
-print(data.decode().strip())
-
-
-# Ask user to choose REGISTER or LOGIN.
-option = input("Choose: ").strip().upper()
+# TCP is a continuous stream.
+# One recv() does not necessarily contain
+# exactly one message.
+buffer = ""
 
 
-# Send option to server.
-client.send(option.encode())
+def receive_line():
+
+    global buffer
 
 
-# Receive username request.
-data = client.recv(1024)
+    # Keep receiving until we get a complete line.
+    while "\n" not in buffer:
 
-print(data.decode().strip())
-
-
-# Ask for username.
-username = input("Username: ").strip()
-
-
-# Send username.
-client.send(username.encode())
-
-
-# -------------------------
-# EMAIL
-# -------------------------
-
-if option == "REGISTER":
-
-    # Receive email request.
-    data = client.recv(1024)
-
-    print(data.decode().strip())
-
-
-    # Ask for email.
-    email = input("Email: ").strip()
-
-
-    # Send email.
-    client.send(email.encode())
-
-
-# -------------------------
-# PASSWORD
-# -------------------------
-
-# Receive password request.
-data = client.recv(1024)
-
-print(data.decode().strip())
-
-
-# Ask for password.
-password = input("Password: ")
-
-
-# Send password.
-client.send(password.encode())
-
-
-# Receive authentication result.
-data = client.recv(1024)
-
-message = data.decode().strip()
-
-
-print(message)
-
-
-# -------------------------
-# AUTHENTICATION CHECK
-# -------------------------
-
-if message != "AUTHENTICATION SUCCESS":
-
-    print("Authentication failed.")
-
-    client.close()
-
-
-else:
-
-    print(
-        "You are now connected to CipherChat."
-    )
-
-
-    # -------------------------
-    # RECEIVE HISTORY
-    # -------------------------
-
-    # The server sends the message history
-    # immediately after authentication.
-    #
-    # We receive the history BEFORE starting
-    # the background receiving thread.
-
-    history = ""
-
-    while True:
-
-        # Receive data from the server.
         data = client.recv(1024)
 
 
         # Server disconnected.
         if data == b"":
 
-            print("Server disconnected.")
-
-            client.close()
-
-            break
+            return None
 
 
-        # Add received data to our buffer.
-        history = history + data.decode()
-
-
-        # Process complete lines.
-        while "\n" in history:
-
-            line, history = history.split(
-                "\n",
-                1
+        # Decode safely.
+        buffer = (
+            buffer
+            + data.decode(
+                "utf-8",
+                errors="replace"
             )
+        )
 
 
-            # Display the line.
-            print(line)
+    # Extract one complete message.
+    message, buffer = (
+        buffer.split(
+            "\n",
+            1
+        )
+    )
 
 
-            # Stop when history is finished.
-            if line == "--- End of History ---":
-
-                break
+    return message
 
 
-        # Check if the history ended.
-        if line == "--- End of History ---":
+def send_message(message):
 
-            break
-
-
-    # -------------------------
-    # RECEIVE NEW MESSAGES
-    # -------------------------
-
-    def receive_messages():
-
-        # Buffer for incoming data.
-        buffer = ""
+    # Add newline delimiter.
+    message = message + "\n"
 
 
-        while True:
-
-            try:
-
-                # Receive data from the server.
-                data = client.recv(1024)
+    # Encode using UTF-8.
+    data = message.encode(
+        "utf-8"
+    )
 
 
-                # Server disconnected.
-                if data == b"":
-
-                    print(
-                        "Server disconnected."
-                    )
-
-                    break
+    # Send to server.
+    client.send(data)
 
 
-                # Add data to the buffer.
-                buffer = buffer + data.decode()
+# =========================================================
+# AUTHENTICATION
+# =========================================================
+
+message = receive_line()
+
+if message is None:
+
+    print("Server disconnected.")
+
+    client.close()
+
+    exit()
 
 
-                # Process complete messages.
-                while "\n" in buffer:
-
-                    message, buffer = (
-                        buffer.split(
-                            "\n",
-                            1
-                        )
-                    )
+print(message)
 
 
-                    # Display received message.
-                    print(message)
+# Choose REGISTER or LOGIN.
+option = input(
+    "Choose: "
+).strip().upper()
 
 
-            except ConnectionResetError:
+send_message(option)
+
+
+# =========================================================
+# USERNAME
+# =========================================================
+
+message = receive_line()
+
+if message is None:
+
+    print("Server disconnected.")
+
+    client.close()
+
+    exit()
+
+
+print(message)
+
+
+username = input(
+    "Username: "
+).strip()
+
+
+send_message(username)
+
+
+# =========================================================
+# EMAIL
+# =========================================================
+
+if option == "REGISTER":
+
+    message = receive_line()
+
+
+    if message is None:
+
+        print("Server disconnected.")
+
+        client.close()
+
+        exit()
+
+
+    print(message)
+
+
+    email = input(
+        "Email: "
+    ).strip()
+
+
+    send_message(email)
+
+
+# =========================================================
+# PASSWORD
+# =========================================================
+
+message = receive_line()
+
+
+if message is None:
+
+    print("Server disconnected.")
+
+    client.close()
+
+    exit()
+
+
+print(message)
+
+
+password = input(
+    "Password: "
+)
+
+
+send_message(password)
+
+
+# =========================================================
+# AUTHENTICATION RESULT
+# =========================================================
+
+message = receive_line()
+
+
+if message is None:
+
+    print("Server disconnected.")
+
+    client.close()
+
+    exit()
+
+
+print(message)
+
+
+# Authentication failed.
+if message != "AUTHENTICATION SUCCESS":
+
+    print(
+        "Authentication failed."
+    )
+
+    client.close()
+
+    exit()
+
+
+print(
+    "You are now connected to CipherChat."
+)
+
+
+# =========================================================
+# ROOM MENU
+# =========================================================
+
+message = receive_line()
+
+
+if message is None:
+
+    print("Server disconnected.")
+
+    client.close()
+
+    exit()
+
+
+print(message)
+
+
+room_option = input(
+    "Choose: "
+).strip().upper()
+
+
+send_message(room_option)
+
+
+# =========================================================
+# CREATE ROOM
+# =========================================================
+
+if room_option == "CREATE":
+
+    message = receive_line()
+
+
+    if message is None:
+
+        print("Server disconnected.")
+
+        client.close()
+
+        exit()
+
+
+    print(message)
+
+
+    room_name = input(
+        "Room name: "
+    ).strip()
+
+
+    send_message(room_name)
+
+
+# =========================================================
+# JOIN ROOM
+# =========================================================
+
+elif room_option == "JOIN":
+
+    message = receive_line()
+
+
+    if message is None:
+
+        print("Server disconnected.")
+
+        client.close()
+
+        exit()
+
+
+    print(message)
+
+
+    room_code = input(
+        "Room code: "
+    ).strip()
+
+
+    send_message(room_code)
+
+
+else:
+
+    print(
+        "Invalid room option."
+    )
+
+    client.close()
+
+    exit()
+
+
+# =========================================================
+# ROOM RESULT
+# =========================================================
+
+message = receive_line()
+
+
+if message is None:
+
+    print("Server disconnected.")
+
+    client.close()
+
+    exit()
+
+
+print(message)
+
+
+if (
+    message == "Room creation failed."
+    or message == "Unable to join room."
+    or message == "Invalid room code."
+):
+
+    print(
+        "Room operation failed."
+    )
+
+    client.close()
+
+    exit()
+
+
+# =========================================================
+# ROOM INFORMATION
+# =========================================================
+
+while True:
+
+    message = receive_line()
+
+
+    if message is None:
+
+        print(
+            "Server disconnected."
+        )
+
+        client.close()
+
+        exit()
+
+
+    print(message)
+
+
+    if message == "--- End Members ---":
+
+        break
+
+
+# =========================================================
+# ROOM MESSAGE HISTORY
+# =========================================================
+
+while True:
+
+    message = receive_line()
+
+
+    if message is None:
+
+        print(
+            "Server disconnected."
+        )
+
+        client.close()
+
+        exit()
+
+
+    print(message)
+
+
+    if message == "--- End of History ---":
+
+        break
+
+
+# =========================================================
+# RECEIVE NEW MESSAGES
+# =========================================================
+
+def receive_messages():
+
+    global buffer
+
+
+    while True:
+
+        try:
+
+            data = client.recv(1024)
+
+
+            # Server disconnected.
+            if data == b"":
 
                 print(
-                    "Server connection was reset."
+                    "\nServer disconnected."
                 )
 
                 break
 
 
-    # Create receiving thread.
-    receive_thread = threading.Thread(
-        target=receive_messages
-    )
+            # Decode safely.
+            buffer = (
+                buffer
+                + data.decode(
+                    "utf-8",
+                    errors="replace"
+                )
+            )
 
 
-    # Start receiving thread.
-    receive_thread.start()
+            # Process every complete message.
+            while "\n" in buffer:
+
+                message, buffer = (
+                    buffer.split(
+                        "\n",
+                        1
+                    )
+                )
 
 
-    # -------------------------
-    # SEND MESSAGES
-    # -------------------------
-
-    while True:
-
-        # Ask user for a message.
-        message = input("You: ")
+                print(
+                    "\n" + message
+                )
 
 
-        # Add newline delimiter.
-        message = message + "\n"
+        except ConnectionResetError:
+
+            print(
+                "\nServer connection was reset."
+            )
+
+            break
 
 
-        # Convert message to bytes.
-        data = message.encode()
+        except OSError:
+
+            break
 
 
-        # Send message.
-        client.send(data)
+# =========================================================
+# START RECEIVE THREAD
+# =========================================================
+
+receive_thread = threading.Thread(
+    target=receive_messages,
+    daemon=True
+)
 
 
-        # Check for exit.
-        if message.strip().lower() == "exit":
+receive_thread.start()
+
+
+# =========================================================
+# CHAT INPUT
+# =========================================================
+
+print(
+    "\nYou are now in the chat."
+)
+
+print(
+    "Type a message and press Enter."
+)
+
+print(
+    "Type 'exit' to leave."
+)
+
+
+while True:
+
+    try:
+
+        message = input(
+            "You: "
+        )
+
+
+        # Add message delimiter.
+        send_message(message)
+
+
+        # Exit chat.
+        if message.lower() == "exit":
 
             print(
                 "Closing connection..."
@@ -277,5 +541,25 @@ else:
             break
 
 
-    # Close the connection.
-    client.close()
+    except (
+        ConnectionResetError,
+        BrokenPipeError
+    ):
+
+        print(
+            "Connection to server lost."
+        )
+
+        break
+
+
+    except EOFError:
+
+        break
+
+
+# =========================================================
+# CLOSE CONNECTION
+# =========================================================
+
+client.close()

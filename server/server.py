@@ -4,154 +4,334 @@ import sys
 import os
 
 
-# Get the CipherChat project folder.
+# =========================================================
+# PROJECT PATHS
+# =========================================================
+
 PROJECT_ROOT = os.path.dirname(
     os.path.dirname(os.path.abspath(__file__))
 )
 
-# Get the server folder.
 SERVER_FOLDER = os.path.dirname(
     os.path.abspath(__file__)
 )
 
-
-# Add project folders to Python's module search path.
 sys.path.append(PROJECT_ROOT)
 sys.path.append(SERVER_FOLDER)
 
 
-# Import authentication functions.
+# =========================================================
+# IMPORTS
+# =========================================================
+
 from auth import register_user, login_user
 
-# Import database functions.
-from database.database import save_message, get_messages
+from database.database import (
+    save_message,
+    create_room,
+    join_room,
+    get_room,
+    get_room_members,
+    get_room_messages
+)
 
 
-# IP address where our server will listen.
+# =========================================================
+# SERVER SETTINGS
+# =========================================================
+
 HOST = "127.0.0.1"
-
-# Port used for communication.
 PORT = 5000
 
 
-# Create TCP socket.
+# =========================================================
+# INPUT LIMITS
+# =========================================================
+
+MAX_USERNAME_LENGTH = 20
+MAX_EMAIL_LENGTH = 100
+MAX_PASSWORD_LENGTH = 100
+MAX_ROOM_NAME_LENGTH = 50
+MAX_MESSAGE_LENGTH = 500
+MAX_ROOM_CODE_LENGTH = 6
+
+
+# =========================================================
+# CREATE SERVER SOCKET
+# =========================================================
+
 server = socket.socket(
     socket.AF_INET,
     socket.SOCK_STREAM
 )
 
 
-# Attach socket to IP and port.
-server.bind((HOST, PORT))
+# Allow quick server restart.
+server.setsockopt(
+    socket.SOL_SOCKET,
+    socket.SO_REUSEADDR,
+    1
+)
+
+
+# Bind server.
+server.bind(
+    (HOST, PORT)
+)
 
 
 # Start listening.
 server.listen()
 
+
 print("CipherChat server started.")
 print("Waiting for clients...")
 
 
-# Store connected clients.
-# Format:
+# =========================================================
+# CONNECTED CLIENTS
+# =========================================================
+
 # socket -> username
 clients = {}
 
 
+# socket -> room_code
+client_rooms = {}
+
+
+# =========================================================
+# HELPER FUNCTIONS
+# =========================================================
+
+def receive_text(client):
+
+    # Receive data from client.
+    data = client.recv(1024)
+
+
+    # Client closed connection.
+    if data == b"":
+
+        return None
+
+
+    # Decode safely.
+    return data.decode(
+        "utf-8",
+        errors="replace"
+    ).strip()
+
+
+def send_message(client, message):
+
+    # Add newline delimiter.
+    message = message + "\n"
+
+
+    # Encode using UTF-8.
+    data = message.encode(
+        "utf-8"
+    )
+
+
+    # Send message.
+    client.send(data)
+
+
+def valid_length(value, maximum):
+
+    # Check maximum length.
+    return len(value) <= maximum
+
+
+# =========================================================
+# CLIENT HANDLER
+# =========================================================
+
 def handle_client(client, address):
 
-    # Buffer for incoming messages.
+    # Buffer for incoming chat messages.
     buffer = ""
 
-    # Username is empty until authentication succeeds.
+    # Username before authentication.
     username = ""
 
-    print("Client connected:", address)
+    # Current room.
+    room_code = None
+
+
+    print(
+        "Client connected:",
+        address
+    )
+
 
     try:
 
-        # Ask whether the user wants to register or login.
-        client.send(
-            "REGISTER or LOGIN?\n".encode()
+        # =================================================
+        # AUTHENTICATION
+        # =================================================
+
+        send_message(
+            client,
+            "REGISTER or LOGIN?"
         )
 
-        # Receive option.
-        data = client.recv(1024)
 
-        option = data.decode().strip().upper()
+        option = receive_text(
+            client
+        )
 
 
-        # Validate option.
-        if option not in ["REGISTER", "LOGIN"]:
+        if option is None:
 
-            client.send(
-                "Invalid option.\n".encode()
-            )
-
-            client.close()
             return
 
 
-        # Ask for username.
-        client.send(
-            "USERNAME?\n".encode()
-        )
-
-        data = client.recv(1024)
-
-        username = data.decode().strip()
+        option = option.upper()
 
 
-        # -------------------------
-        # REGISTER
-        # -------------------------
+        # Validate option.
+        if option not in [
+            "REGISTER",
+            "LOGIN"
+        ]:
 
-        if option == "REGISTER":
-
-            # Ask for email only during registration.
-            client.send(
-                "EMAIL?\n".encode()
+            send_message(
+                client,
+                "Invalid option."
             )
 
-            data = client.recv(1024)
-
-            email = data.decode().strip()
+            return
 
 
-        # -------------------------
-        # PASSWORD
-        # -------------------------
+        # =================================================
+        # USERNAME
+        # =================================================
 
-        client.send(
-            "PASSWORD?\n".encode()
+        send_message(
+            client,
+            "USERNAME?"
         )
 
-        data = client.recv(1024)
 
-        password = data.decode().strip()
+        username = receive_text(
+            client
+        )
 
 
-        # -------------------------
-        # REGISTER
-        # -------------------------
+        if username is None:
+
+            return
+
+
+        # Validate username length.
+        if not valid_length(
+            username,
+            MAX_USERNAME_LENGTH
+        ):
+
+            send_message(
+                client,
+                "Username is too long."
+            )
+
+            return
+
+
+        # =================================================
+        # EMAIL
+        # =================================================
 
         if option == "REGISTER":
 
-            # Register username + email + password.
+            send_message(
+                client,
+                "EMAIL?"
+            )
+
+
+            email = receive_text(
+                client
+            )
+
+
+            if email is None:
+
+                return
+
+
+            # Validate email length.
+            if not valid_length(
+                email,
+                MAX_EMAIL_LENGTH
+            ):
+
+                send_message(
+                    client,
+                    "Email is too long."
+                )
+
+                return
+
+
+        # =================================================
+        # PASSWORD
+        # =================================================
+
+        send_message(
+            client,
+            "PASSWORD?"
+        )
+
+
+        password = receive_text(
+            client
+        )
+
+
+        if password is None:
+
+            return
+
+
+        # Validate password length.
+        if not valid_length(
+            password,
+            MAX_PASSWORD_LENGTH
+        ):
+
+            send_message(
+                client,
+                "Password is too long."
+            )
+
+            return
+
+
+        # =================================================
+        # REGISTER
+        # =================================================
+
+        if option == "REGISTER":
+
             success = register_user(
                 username,
                 email,
                 password
             )
 
+
             if not success:
 
-                client.send(
-                    "Registration failed.\n".encode()
+                send_message(
+                    client,
+                    "Registration failed."
                 )
 
-                client.close()
                 return
+
 
             print(
                 username,
@@ -159,26 +339,27 @@ def handle_client(client, address):
             )
 
 
-        # -------------------------
+        # =================================================
         # LOGIN
-        # -------------------------
+        # =================================================
 
         else:
 
-            # Authenticate existing user.
             success = login_user(
                 username,
                 password
             )
 
+
             if not success:
 
-                client.send(
-                    "Login failed.\n".encode()
+                send_message(
+                    client,
+                    "Login failed."
                 )
 
-                client.close()
                 return
+
 
             print(
                 username,
@@ -186,14 +367,17 @@ def handle_client(client, address):
             )
 
 
-        # Check if this user is already online.
+        # =================================================
+        # DUPLICATE ONLINE USER
+        # =================================================
+
         if username in clients.values():
 
-            client.send(
-                "User is already online.\n".encode()
+            send_message(
+                client,
+                "User is already online."
             )
 
-            client.close()
             return
 
 
@@ -201,65 +385,287 @@ def handle_client(client, address):
         clients[client] = username
 
 
-        # Authentication succeeded.
-        client.send(
-            "AUTHENTICATION SUCCESS\n".encode()
+        # Authentication successful.
+        send_message(
+            client,
+            "AUTHENTICATION SUCCESS"
         )
 
 
-        # -------------------------
-        # MESSAGE HISTORY
-        # -------------------------
+        # =================================================
+        # ROOM MENU
+        # =================================================
 
-        history = get_messages(username)
-
-
-        client.send(
-            "--- Recent Messages ---\n".encode()
+        send_message(
+            client,
+            "ROOM MENU: CREATE or JOIN"
         )
 
 
-        # Send previous messages.
-        for sender, receiver, message in history:
-
-            if receiver is not None:
-
-                history_message = (
-                    "[Private] "
-                    + sender
-                    + ": "
-                    + message
-                    + "\n"
-                )
-
-            else:
-
-                history_message = (
-                    sender
-                    + ": "
-                    + message
-                    + "\n"
-                )
+        room_option = receive_text(
+            client
+        )
 
 
-            client.send(
-                history_message.encode()
+        if room_option is None:
+
+            return
+
+
+        room_option = room_option.upper()
+
+
+        # =================================================
+        # CREATE ROOM
+        # =================================================
+
+        if room_option == "CREATE":
+
+            send_message(
+                client,
+                "ROOM NAME?"
             )
 
 
-        client.send(
-            "--- End of History ---\n".encode()
+            room_name = receive_text(
+                client
+            )
+
+
+            if room_name is None:
+
+                return
+
+
+            # Validate room name.
+            if not valid_length(
+                room_name,
+                MAX_ROOM_NAME_LENGTH
+            ):
+
+                send_message(
+                    client,
+                    "Room name is too long."
+                )
+
+                return
+
+
+            # Current project uses permanent rooms.
+            room_type = "permanent"
+
+
+            # Create room.
+            room_code = create_room(
+                username,
+                room_name,
+                room_type
+            )
+
+
+            if room_code is None:
+
+                send_message(
+                    client,
+                    "Room creation failed."
+                )
+
+                return
+
+
+            # Store user's current room.
+            client_rooms[client] = room_code
+
+
+            print(
+                username,
+                "created room",
+                room_code
+            )
+
+
+            send_message(
+                client,
+                "ROOM CREATED: "
+                + room_code
+            )
+
+
+        # =================================================
+        # JOIN ROOM
+        # =================================================
+
+        elif room_option == "JOIN":
+
+            send_message(
+                client,
+                "ROOM CODE?"
+            )
+
+
+            room_code = receive_text(
+                client
+            )
+
+
+            if room_code is None:
+
+                return
+
+
+            # Validate room code.
+            if (
+                len(room_code) != MAX_ROOM_CODE_LENGTH
+                or not room_code.isdigit()
+            ):
+
+                send_message(
+                    client,
+                    "Invalid room code."
+                )
+
+                return
+
+
+            # Join room.
+            success = join_room(
+                username,
+                room_code
+            )
+
+
+            if not success:
+
+                send_message(
+                    client,
+                    "Unable to join room."
+                )
+
+                return
+
+
+            # Store user's current room.
+            client_rooms[client] = room_code
+
+
+            print(
+                username,
+                "joined room",
+                room_code
+            )
+
+
+            send_message(
+                client,
+                "ROOM JOINED: "
+                + room_code
+            )
+
+
+        # =================================================
+        # INVALID ROOM OPTION
+        # =================================================
+
+        else:
+
+            send_message(
+                client,
+                "Invalid room option."
+            )
+
+            return
+
+
+        # =================================================
+        # ROOM INFORMATION
+        # =================================================
+
+        room = get_room(
+            room_code
         )
 
 
-        # -------------------------
-        # CHAT
-        # -------------------------
+        if room is not None:
+
+            room_name = room[2]
+
+
+            send_message(
+                client,
+                "ROOM: "
+                + room_name
+            )
+
+
+        # Get room members.
+        members = get_room_members(
+            room_code
+        )
+
+
+        send_message(
+            client,
+            "--- Room Members ---"
+        )
+
+
+        for member_username, role in members:
+
+            send_message(
+                client,
+                member_username
+                + " ["
+                + role
+                + "]"
+            )
+
+
+        send_message(
+            client,
+            "--- End Members ---"
+        )
+
+
+        # =================================================
+        # ROOM MESSAGE HISTORY
+        # =================================================
+
+        history = get_room_messages(
+            room_code
+        )
+
+
+        send_message(
+            client,
+            "--- Recent Messages ---"
+        )
+
+
+        for sender, message in history:
+
+            send_message(
+                client,
+                sender
+                + ": "
+                + message
+            )
+
+
+        send_message(
+            client,
+            "--- End of History ---"
+        )
+
+
+        # =================================================
+        # CHAT LOOP
+        # =================================================
 
         while True:
 
-            # Receive data.
-            data = client.recv(1024)
+            data = client.recv(
+                1024
+            )
 
 
             # Client disconnected.
@@ -273,20 +679,51 @@ def handle_client(client, address):
                 break
 
 
-            # Add data to buffer.
-            buffer = buffer + data.decode()
+            # Decode safely.
+            buffer = (
+                buffer
+                + data.decode(
+                    "utf-8",
+                    errors="replace"
+                )
+            )
 
 
-            # Process complete messages.
+            # =================================================
+            # MESSAGE FRAMING
+            # =================================================
+
             while "\n" in buffer:
 
-                message, buffer = buffer.split(
-                    "\n",
-                    1
+                message, buffer = (
+                    buffer.split(
+                        "\n",
+                        1
+                    )
                 )
 
 
-                # Exit command.
+                # =================================================
+                # MESSAGE LENGTH LIMIT
+                # =================================================
+
+                if not valid_length(
+                    message,
+                    MAX_MESSAGE_LENGTH
+                ):
+
+                    send_message(
+                        client,
+                        "Message is too long. Maximum 500 characters."
+                    )
+
+                    continue
+
+
+                # =================================================
+                # EXIT
+                # =================================================
+
                 if message.lower() == "exit":
 
                     print(
@@ -297,9 +734,9 @@ def handle_client(client, address):
                     return
 
 
-                # -------------------------
+                # =================================================
                 # PRIVATE MESSAGE
-                # -------------------------
+                # =================================================
 
                 if message.startswith("@"):
 
@@ -309,16 +746,21 @@ def handle_client(client, address):
                     )
 
 
+                    # Validate private message format.
                     if len(parts) < 2:
 
-                        client.send(
-                            "Usage: @username message\n".encode()
+                        send_message(
+                            client,
+                            "Usage: @username message"
                         )
 
                         continue
 
 
-                    target_username = parts[0][1:]
+                    target_username = (
+                        parts[0][1:]
+                    )
+
 
                     private_text = parts[1]
 
@@ -326,20 +768,27 @@ def handle_client(client, address):
                     # Find target client.
                     target_client = None
 
+
                     for other_client in clients:
 
-                        if clients[other_client] == target_username:
+                        if (
+                            clients[other_client]
+                            == target_username
+                        ):
 
-                            target_client = other_client
+                            target_client = (
+                                other_client
+                            )
 
                             break
 
 
-                    # Target not online.
+                    # Target is not online.
                     if target_client is None:
 
-                        client.send(
-                            "User not found.\n".encode()
+                        send_message(
+                            client,
+                            "User not found."
                         )
 
                         continue
@@ -359,52 +808,66 @@ def handle_client(client, address):
                         + username
                         + ": "
                         + private_text
-                        + "\n"
                     )
 
 
                     # Send only to target.
-                    target_client.send(
-                        private_message.encode()
+                    send_message(
+                        target_client,
+                        private_message
                     )
 
 
-                # -------------------------
-                # BROADCAST
-                # -------------------------
+                # =================================================
+                # ROOM MESSAGE
+                # =================================================
 
                 else:
 
                     print(
                         username
-                        + ": "
+                        + " ["
+                        + room_code
+                        + "]: "
                         + message
                     )
 
 
-                    # Save broadcast message.
+                    # Save message with room code.
                     save_message(
                         username,
                         None,
-                        message
+                        message,
+                        room_code
                     )
 
 
-                    broadcast_message = (
+                    # Create room message.
+                    room_message = (
                         username
                         + ": "
                         + message
-                        + "\n"
                     )
 
 
-                    # Send to other connected users.
+                    # Send only to same room.
                     for other_client in clients:
 
-                        if other_client != client:
+                        other_room = (
+                            client_rooms.get(
+                                other_client
+                            )
+                        )
 
-                            other_client.send(
-                                broadcast_message.encode()
+
+                        if (
+                            other_client != client
+                            and other_room == room_code
+                        ):
+
+                            send_message(
+                                other_client,
+                                room_message
                             )
 
 
@@ -416,29 +879,63 @@ def handle_client(client, address):
         )
 
 
+    except UnicodeError:
+
+        print(
+            username,
+            "sent invalid text data."
+        )
+
+
     finally:
 
-        # Remove disconnected client.
+        # Remove authenticated client.
         if client in clients:
 
             del clients[client]
+
+
+        # Remove room information.
+        if client in client_rooms:
+
+            del client_rooms[client]
 
 
         # Close socket.
         client.close()
 
 
-# Keep accepting clients.
+# =========================================================
+# MAIN SERVER LOOP
+# =========================================================
+
 while True:
 
-    client, address = server.accept()
+    try:
+
+        # Wait for a new client.
+        client, address = server.accept()
 
 
-    # Give each client its own thread.
-    client_thread = threading.Thread(
-        target=handle_client,
-        args=(client, address)
-    )
+        # Create client thread.
+        client_thread = threading.Thread(
+            target=handle_client,
+            args=(client, address)
+        )
 
 
-    client_thread.start()
+        # Start thread.
+        client_thread.start()
+
+
+    except KeyboardInterrupt:
+
+        print(
+            "\nCipherChat server shutting down."
+        )
+
+        break
+
+
+# Close server socket.
+server.close()
