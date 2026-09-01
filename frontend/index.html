@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>CipherChat</title>
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+
+</head>
+
+
+<body>
+
+
+    <!-- =====================================================
+         AUTH SCREEN
+         ===================================================== -->
+
+    <main
+        id="authScreen"
+        class="auth-container"
+    >
+
+        <section class="auth-card">
+
+            <div class="brand">
+
+                <div class="brand-icon">
+                    C
+                </div>
+
+                <h1>
+                    CipherChat
+                </h1>
+
+                <p>
+                    Simple. Private. Connected.
+                </p>
+
+            </div>
+
+
+            <div class="auth-tabs">
+
+                <button
+                    id="loginTab"
+                    class="tab active"
+                    type="button"
+                >
+                    Login
+                </button>
+
+                <button
+                    id="registerTab"
+                    class="tab"
+                    type="button"
+                >
+                    Register
+                </button>
+
+            </div>
+
+
+            <!-- LOGIN -->
+
+            <form id="loginForm">
+
+                <div class="input-group">
+
+                    <label for="loginUsername">
+                        Username
+                    </label>
+
+                    <input
+                        type="text"
+                        id="loginUsername"
+                        placeholder="Enter username"
+                        maxlength="20"
+                        autocomplete="username"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="input-group">
+
+                    <label for="loginPassword">
+                        Password
+                    </label>
+
+                    <input
+                        type="password"
+                        id="loginPassword"
+                        placeholder="Enter password"
+                        maxlength="100"
+                        autocomplete="current-password"
+                        required
+                    >
+
+                </div>
+
+
+                <button
+                    type="submit"
+                    class="primary-button"
+                >
+                    Login
+                </button>
+
+            </form>
+
+
+            <!-- REGISTER -->
+
+            <form
+                id="registerForm"
+                class="hidden"
+            >
+
+                <div class="input-group">
+
+                    <label for="registerUsername">
+                        Username
+                    </label>
+
+                    <input
+                        type="text"
+                        id="registerUsername"
+                        placeholder="Choose username"
+                        maxlength="20"
+                        autocomplete="username"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="input-group">
+
+                    <label for="registerEmail">
+                        Email
+                    </label>
+
+                    <input
+                        type="email"
+                        id="registerEmail"
+                        placeholder="Enter email"
+                        maxlength="100"
+                        autocomplete="email"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="input-group">
+
+                    <label for="registerPassword">
+                        Password
+                    </label>
+
+                    <input
+                        type="password"
+                        id="registerPassword"
+                        placeholder="Create password"
+                        maxlength="100"
+                        autocomplete="new-password"
+                        required
+                    >
+
+                </div>
+
+
+                <button
+                    type="submit"
+                    class="primary-button"
+                >
+                    Create Account
+                </button>
+
+            </form>
+
+
+            <p
+                id="authMessage"
+                class="auth-message"
+            ></p>
+
+        </section>
+
+    </main>
+
+
+
+    <!-- =====================================================
+         APPLICATION
+         ===================================================== -->
+
+    <main
+        id="appScreen"
+        class="app-screen hidden"
+    >
+
+
+        <!-- SIDEBAR -->
+
+        <aside class="sidebar">
+
+
+            <div class="sidebar-brand">
+
+                <div class="brand-icon small">
+                    C
+                </div>
+
+                <span>
+                    CipherChat
+                </span>
+
+            </div>
+
+
+            <nav class="main-nav">
+
+
+                <button
+                    id="homeNav"
+                    class="nav-item active"
+                    type="button"
+                >
+
+                    <span>
+                        Home
+                    </span>
+
+                </button>
+
+
+                <button
+                    id="privateNav"
+                    class="nav-item"
+                    type="button"
+                >
+
+                    <span>
+                        1-to-1 Chat
+                    </span>
+
+                </button>
+
+
+                <button
+                    id="roomsNav"
+                    class="nav-item"
+                    type="button"
+                >
+
+                    <span>
+                        Chat Rooms
+                    </span>
+
+                </button>
+
+
+            </nav>
+
+
+            <div class="sidebar-bottom">
+
+                <div class="current-user">
+
+                    <div
+                        id="sidebarAvatar"
+                        class="user-avatar"
+                    >
+                        U
+                    </div>
+
+                    <div>
+
+                        <strong id="sidebarUsername">
+                            User
+                        </strong>
+
+                        <small>
+                            Online
+                        </small>
+
+                    </div>
+
+                </div>
+
+
+                <button
+                    id="logoutButton"
+                    class="logout-button"
+                    type="button"
+                >
+                    Logout
+                </button>
+
+            </div>
+
+
+        </aside>
+
+
+
+        <!-- MAIN CONTENT -->
+
+        <section class="main-content">
+
+
+            <!-- =================================================
+                 HOME
+                 ================================================= -->
+
+            <section
+                id="homePage"
+                class="page"
+            >
+
+                <header class="page-header">
+
+                    <div>
+
+                        <h1>
+                            Welcome back
+                        </h1>
+
+                        <p id="homeWelcome">
+                            Ready to connect?
+                        </p>
+
+                    </div>
+
+                </header>
+
+
+                <div class="welcome-card">
+
+                    <div>
+
+                        <span class="eyebrow">
+                            CIPHERCHAT
+                        </span>
+
+                        <h2>
+                            Connect with people,
+                            privately.
+                        </h2>
+
+                        <p>
+                            Start a private conversation
+                            or join a room with your friends.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <h3 class="section-title">
+                    Start chatting
+                </h3>
+
+
+                <div class="home-options">
+
+
+                    <button
+                        id="homePrivateButton"
+                        class="feature-card"
+                        type="button"
+                    >
+
+                        <div class="feature-icon">
+                            1:1
+                        </div>
+
+                        <div>
+
+                            <strong>
+                                1-to-1 Chat
+                            </strong>
+
+                            <p>
+                                Find a user and start
+                                a private conversation.
+                            </p>
+
+                        </div>
+
+                        <span class="arrow">
+                            →
+                        </span>
+
+                    </button>
+
+
+                    <button
+                        id="homeRoomButton"
+                        class="feature-card"
+                        type="button"
+                    >
+
+                        <div class="feature-icon">
+                            #
+                        </div>
+
+                        <div>
+
+                            <strong>
+                                Chat Room
+                            </strong>
+
+                            <p>
+                                Create a room or join
+                                using a six-digit code.
+                            </p>
+
+                        </div>
+
+                        <span class="arrow">
+                            →
+                        </span>
+
+                    </button>
+
+
+                </div>
+
+            </section>
+
+
+
+            <!-- =================================================
+                 PRIVATE USER SEARCH
+                 ================================================= -->
+
+            <section
+                id="privatePage"
+                class="page hidden"
+            >
+
+                <header class="page-header">
+
+                    <div>
+
+                        <h1>
+                            1-to-1 Chat
+                        </h1>
+
+                        <p>
+                            Find a friend using their
+                            username or email.
+                        </p>
+
+                    </div>
+
+                </header>
+
+
+                <div class="search-box">
+
+                    <input
+                        id="userSearch"
+                        type="text"
+                        placeholder="Search username or email..."
+                        maxlength="100"
+                    >
+
+                </div>
+
+
+                <div class="list-header">
+
+                    <h3>
+                        Users
+                    </h3>
+
+                    <span id="userCount">
+                        0 users
+                    </span>
+
+                </div>
+
+
+                <div
+                    id="userList"
+                    class="user-list"
+                ></div>
+
+
+                <div
+                    id="userEmpty"
+                    class="empty-state hidden"
+                >
+
+                    <strong>
+                        No users found
+                    </strong>
+
+                    <p>
+                        Try another username or email.
+                    </p>
+
+                </div>
+
+            </section>
+
+
+
+            <!-- =================================================
+                 PRIVATE CONVERSATION
+                 ================================================= -->
+
+            <section
+                id="privateChatPage"
+                class="chat-page hidden"
+            >
+
+                <header class="conversation-header">
+
+                    <button
+                        id="privateChatBack"
+                        class="back-button"
+                        type="button"
+                    >
+                        ←
+                    </button>
+
+
+                    <div
+                        id="privateChatAvatar"
+                        class="user-avatar"
+                    >
+                        U
+                    </div>
+
+
+                    <div class="conversation-user">
+
+                        <strong id="privateChatName">
+                            User
+                        </strong>
+
+                        <small>
+                            Online
+                        </small>
+
+                    </div>
+
+                </header>
+
+
+                <div
+                    id="privateMessages"
+                    class="messages"
+                ></div>
+
+
+                <form
+                    id="privateMessageForm"
+                    class="message-form"
+                >
+
+                    <input
+                        id="privateMessageInput"
+                        type="text"
+                        placeholder="Type a message..."
+                        maxlength="500"
+                        autocomplete="off"
+                    >
+
+                    <button
+                        type="submit"
+                        class="send-button"
+                    >
+                        Send
+                    </button>
+
+                </form>
+
+            </section>
+
+
+
+            <!-- =================================================
+                 ROOMS
+                 ================================================= -->
+
+            <section
+                id="roomsPage"
+                class="page hidden"
+            >
+
+                <header class="page-header">
+
+                    <div>
+
+                        <h1>
+                            Chat Rooms
+                        </h1>
+
+                        <p>
+                            Create a room or join one
+                            with a six-digit code.
+                        </p>
+
+                    </div>
+
+                </header>
+
+
+                <div class="room-actions">
+
+
+                    <div class="room-card">
+
+                        <div class="room-icon">
+                            +
+                        </div>
+
+                        <h3>
+                            Create a Room
+                        </h3>
+
+                        <p>
+                            Create a private room
+                            for your friends.
+                        </p>
+
+
+                        <form id="createRoomForm">
+
+                            <input
+                                id="roomNameInput"
+                                type="text"
+                                placeholder="Room name"
+                                maxlength="50"
+                                required
+                            >
+
+
+                            <button
+                                type="submit"
+                                class="primary-button"
+                            >
+                                Create Room
+                            </button>
+
+                        </form>
+
+                    </div>
+
+
+                    <div class="room-card">
+
+                        <div class="room-icon">
+                            #
+                        </div>
+
+                        <h3>
+                            Join a Room
+                        </h3>
+
+                        <p>
+                            Enter a six-digit room
+                            code to join.
+                        </p>
+
+
+                        <form id="joinRoomForm">
+
+                            <input
+                                id="roomCodeInput"
+                                type="text"
+                                placeholder="Six-digit code"
+                                maxlength="6"
+                                inputmode="numeric"
+                                required
+                            >
+
+
+                            <button
+                                type="submit"
+                                class="primary-button"
+                            >
+                                Join Room
+                            </button>
+
+                        </form>
+
+                    </div>
+
+                </div>
+
+
+                <div class="list-header room-list-header">
+
+                    <h3>
+                        Your Rooms
+                    </h3>
+
+                </div>
+
+
+                <div
+                    id="roomList"
+                    class="room-list"
+                ></div>
+
+
+            </section>
+
+
+
+            <!-- =================================================
+                 ROOM CHAT
+                 ================================================= -->
+
+            <section
+                id="roomChatPage"
+                class="chat-page hidden"
+            >
+
+                <header class="conversation-header">
+
+                    <button
+                        id="roomChatBack"
+                        class="back-button"
+                        type="button"
+                    >
+                        ←
+                    </button>
+
+
+                    <div class="room-avatar">
+                        #
+                    </div>
+
+
+                    <div class="conversation-user">
+
+                        <strong id="roomChatName">
+                            Room
+                        </strong>
+
+                        <small id="roomChatCode">
+                            000000
+                        </small>
+
+                    </div>
+
+
+                    <button
+                        id="roomMembersButton"
+                        class="members-button"
+                        type="button"
+                    >
+                        Members
+                    </button>
+
+                </header>
+
+
+                <div
+                    id="roomMessages"
+                    class="messages"
+                ></div>
+
+
+                <form
+                    id="roomMessageForm"
+                    class="message-form"
+                >
+
+                    <input
+                        id="roomMessageInput"
+                        type="text"
+                        placeholder="Message the room..."
+                        maxlength="500"
+                        autocomplete="off"
+                    >
+
+                    <button
+                        type="submit"
+                        class="send-button"
+                    >
+                        Send
+                    </button>
+
+                </form>
+
+            </section>
+
+
+
+        </section>
+
+    </main>
+
+
+
+    <!-- =====================================================
+         MEMBERS MODAL
+         ===================================================== -->
+
+    <div
+        id="membersModal"
+        class="modal hidden"
+    >
+
+        <div class="modal-card">
+
+            <div class="modal-header">
+
+                <div>
+
+                    <h3>
+                        Room Members
+                    </h3>
+
+                    <p>
+                        People in this room
+                    </p>
+
+                </div>
+
+
+                <button
+                    id="closeMembersModal"
+                    class="modal-close"
+                    type="button"
+                >
+                    ×
+                </button>
+
+            </div>
+
+
+            <div
+                id="membersList"
+                class="members-list"
+            ></div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- JAVASCRIPT -->
+
+    <script src="script.js"></script>
+
+</body>
+
+</html>
