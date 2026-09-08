@@ -282,6 +282,34 @@ def get_user_id(username):
 
     return None
 
+def get_all_users():
+
+    # Connect to database.
+    connection = sqlite3.connect(DATABASE)
+
+    cursor = connection.cursor()
+
+
+    # Get all users.
+    cursor.execute(
+        """
+        SELECT
+            username,
+            email
+        FROM users
+        ORDER BY username
+        """
+    )
+
+
+    users = cursor.fetchall()
+
+
+    # Close database.
+    connection.close()
+
+
+    return users
 
 def check_password(password, stored_hash, salt):
 

@@ -438,10 +438,43 @@ loginForm.addEventListener(
         }
 
 
-        // Frontend demo authentication.
+       fetch("http://127.0.0.1:8000/api/login", {
+    method: "POST",
+
+    headers: {
+        "Content-Type": "application/json"
+    },
+
+    body: JSON.stringify({
+        username: username,
+        password: password
+    })
+})
+.then(function (response) {
+    return response.json();
+})
+.then(function (data) {
+
+    if (data.success) {
+
         loginUser(
-            username
+            data.username
         );
+
+    } else {
+
+        authMessage.textContent =
+            data.message;
+
+    }
+
+})
+.catch(function () {
+
+    authMessage.textContent =
+        "Unable to connect to CipherChat server.";
+
+});
 
     }
 );
@@ -492,41 +525,47 @@ registerForm.addEventListener(
         }
 
 
-        // Prevent duplicate demo user.
-        const exists =
-            users.some(
-                function (user) {
-
-                    return (
-                        user.username.toLowerCase()
-                        ===
-                        username.toLowerCase()
-                    );
-                }
-            );
+        
 
 
-        if (exists) {
+       fetch("http://127.0.0.1:8000/api/register", {
+    method: "POST",
 
-            authMessage.textContent =
-                "Username already exists.";
+    headers: {
+        "Content-Type": "application/json"
+    },
 
-            return;
-        }
+    body: JSON.stringify({
+        username: username,
+        email: email,
+        password: password
+    })
+})
+.then(function (response) {
+    return response.json();
+})
+.then(function (data) {
 
-
-        // Add demo user.
-        users.push(
-            {
-                username: username,
-                email: email
-            }
-        );
-
+    if (data.success) {
 
         loginUser(
             username
         );
+
+    } else {
+
+        authMessage.textContent =
+            data.message;
+
+    }
+
+})
+.catch(function () {
+
+    authMessage.textContent =
+        "Unable to connect to CipherChat server.";
+
+});
 
     }
 );
@@ -780,11 +819,9 @@ userSearch.addEventListener(
     }
 );
 
-
-function renderUsers(searchText = "") {
+async function renderUsers(searchText = "") {
 
     userList.innerHTML = "";
-
 
     const search =
         searchText
@@ -792,171 +829,203 @@ function renderUsers(searchText = "") {
             .toLowerCase();
 
 
-    const filteredUsers =
-        users.filter(
-            function (user) {
+    try {
 
-                // Never show current user.
-                if (
-                    user.username
-                        .toLowerCase()
-                    ===
-                    currentUser
-                        .toLowerCase()
-                ) {
-
-                    return false;
-                }
-
-
-                return (
-                    user.username
-                        .toLowerCase()
-                        .includes(search)
-                    ||
-                    user.email
-                        .toLowerCase()
-                        .includes(search)
-                );
-
-            }
-        );
-
-
-    userCount.textContent =
-        filteredUsers.length
-        + " users";
-
-
-    if (
-        filteredUsers.length === 0
-    ) {
-
-        userEmpty.classList.remove(
-            "hidden"
-        );
-
-        return;
-
-    }
-
-
-    userEmpty.classList.add(
-        "hidden"
-    );
-
-
-    filteredUsers.forEach(
-        function (user) {
-
-            const row =
-                document.createElement(
-                    "button"
-                );
-
-
-            row.type = "button";
-
-            row.className =
-                "user-row";
-
-
-            const avatar =
-                document.createElement(
-                    "div"
-                );
-
-
-            avatar.className =
-                "user-avatar";
-
-
-            avatar.textContent =
-                user.username
-                    .charAt(0)
-                    .toUpperCase();
-
-
-            const details =
-                document.createElement(
-                    "div"
-                );
-
-
-            details.className =
-                "user-details";
-
-
-            const name =
-                document.createElement(
-                    "strong"
-                );
-
-
-            name.textContent =
-                user.username;
-
-
-            const email =
-                document.createElement(
-                    "small"
-                );
-
-
-            email.textContent =
-                user.email;
-
-
-            const online =
-                document.createElement(
-                    "span"
-                );
-
-
-            online.className =
-                "online-dot";
-
-
-            details.appendChild(
-                name
-            );
-
-            details.appendChild(
-                email
+        const response =
+            await fetch(
+                "http://127.0.0.1:8000/api/users"
             );
 
 
-            row.appendChild(
-                avatar
+        if (!response.ok) {
+
+            throw new Error(
+                "Unable to load users."
             );
 
-            row.appendChild(
-                details
-            );
-
-            row.appendChild(
-                online
-            );
+        }
 
 
-            row.addEventListener(
-                "click",
-                function () {
+        const users =
+            await response.json();
 
-                    openPrivateChat(
-                        user
+
+        const filteredUsers =
+            users.filter(
+                function (user) {
+
+                    // Never show current user.
+                    if (
+                        user.username
+                            .toLowerCase()
+                        ===
+                        currentUser
+                            .toLowerCase()
+                    ) {
+
+                        return false;
+                    }
+
+
+                    return (
+                        user.username
+                            .toLowerCase()
+                            .includes(search)
+                        ||
+                        user.email
+                            .toLowerCase()
+                            .includes(search)
                     );
 
                 }
             );
 
 
-            userList.appendChild(
-                row
+        userCount.textContent =
+            filteredUsers.length
+            + " users";
+
+
+        if (
+            filteredUsers.length === 0
+        ) {
+
+            userEmpty.classList.remove(
+                "hidden"
             );
 
+            return;
+
         }
-    );
+
+
+        userEmpty.classList.add(
+            "hidden"
+        );
+
+
+        filteredUsers.forEach(
+            function (user) {
+
+                const row =
+                    document.createElement(
+                        "button"
+                    );
+
+
+                row.type = "button";
+
+                row.className =
+                    "user-row";
+
+
+                const avatar =
+                    document.createElement(
+                        "div"
+                    );
+
+
+                avatar.className =
+                    "user-avatar";
+
+
+                avatar.textContent =
+                    user.username
+                        .charAt(0)
+                        .toUpperCase();
+
+
+                const details =
+                    document.createElement(
+                        "div"
+                    );
+
+
+                details.className =
+                    "user-details";
+
+
+                const name =
+                    document.createElement(
+                        "strong"
+                    );
+
+
+                name.textContent =
+                    user.username;
+
+
+                const email =
+                    document.createElement(
+                        "small"
+                    );
+
+
+                email.textContent =
+                    user.email;
+
+
+                const online =
+                    document.createElement(
+                        "span"
+                    );
+
+
+                online.className =
+                    "online-dot";
+
+
+                details.appendChild(
+                    name
+                );
+
+                details.appendChild(
+                    email
+                );
+
+
+                row.appendChild(
+                    avatar
+                );
+
+                row.appendChild(
+                    details
+                );
+
+                row.appendChild(
+                    online
+                );
+
+
+                row.addEventListener(
+                    "click",
+                    function () {
+
+                        openPrivateChat(
+                            user
+                        );
+
+                    }
+                );
+
+
+                userList.appendChild(
+                    row
+                );
+
+            }
+        );
+
+    } catch (error) {
+
+        userCount.textContent =
+            "0 users";
+
+        userEmpty.classList.remove(
+            "hidden"
+        );
+
+    }
 
 }
 
