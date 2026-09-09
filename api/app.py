@@ -20,7 +20,10 @@ sys.path.append(PROJECT_ROOT)
 
 from server.auth import register_user, login_user
 
-from database.database import get_all_users
+from database.database import (
+    get_all_users,
+    get_private_messages
+)
 
 
 # =========================================================
@@ -124,6 +127,60 @@ def get_users():
         })
 
     return jsonify(user_list)
+
+# =========================================================
+# GET PRIVATE CHAT HISTORY
+# =========================================================
+
+@app.route("/api/private-messages", methods=["GET"])
+def private_messages():
+
+    username = request.args.get(
+        "username",
+        ""
+    )
+
+    other_username = request.args.get(
+        "other_username",
+        ""
+    )
+
+
+    # Both usernames are required.
+    if (
+        username == ""
+        or
+        other_username == ""
+    ):
+
+        return jsonify({
+            "success": False,
+            "message": "Both usernames are required."
+        }), 400
+
+
+    messages = get_private_messages(
+        username,
+        other_username
+    )
+
+
+    message_list = []
+
+
+    for sender, message, created_at in messages:
+
+        message_list.append({
+            "sender": sender,
+            "text": message,
+            "time": created_at
+        })
+
+
+    return jsonify({
+        "success": True,
+        "messages": message_list
+    })
 # =========================================================
 # START API SERVER
 # =========================================================

@@ -560,6 +560,65 @@ def get_messages(username):
     return messages
 
 
+def get_private_messages(username, other_username):
+
+    # Find both user IDs.
+    user_id = get_user_id(username)
+    other_user_id = get_user_id(other_username)
+
+
+    # Both users must exist.
+    if user_id is None or other_user_id is None:
+        return []
+
+
+    # Connect to database.
+    connection = sqlite3.connect(DATABASE)
+
+    cursor = connection.cursor()
+
+
+    # Get messages exchanged between these two users.
+    cursor.execute(
+        """
+        SELECT
+            users.username,
+            messages.message,
+            messages.created_at
+        FROM messages
+        JOIN users
+            ON messages.sender_id = users.id
+        WHERE
+            (
+                messages.sender_id = ?
+                AND messages.receiver_id = ?
+            )
+            OR
+            (
+                messages.sender_id = ?
+                AND messages.receiver_id = ?
+            )
+        ORDER BY messages.id ASC
+        """,
+        (
+            user_id,
+            other_user_id,
+            other_user_id,
+            user_id
+        )
+    )
+
+
+    messages = cursor.fetchall()
+
+
+    # Close database.
+    connection.close()
+
+
+    return messages
+
+
 # =========================================================
 # ROOM FUNCTIONS
 # =========================================================
