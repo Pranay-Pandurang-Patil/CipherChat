@@ -1064,55 +1064,104 @@ function openPrivateChat(user) {
 }
 
 
-function renderPrivateMessages() {
+async function renderPrivateMessages() {
 
-    privateMessagesElement.innerHTML =
-        "";
+    privateMessagesElement.innerHTML = "";
 
 
-    if (
-        !selectedPrivateUser
-    ) {
+    if (!selectedPrivateUser) {
 
         return;
 
     }
 
 
-    const username =
-        selectedPrivateUser.username;
+    try {
+
+        const response =
+            await fetch(
+                "http://127.0.0.1:8000/api/private-messages"
+                + "?username="
+                + encodeURIComponent(currentUser)
+                + "&other_username="
+                + encodeURIComponent(
+                    selectedPrivateUser.username
+                )
+            );
 
 
-    const key =
-        getPrivateChatKey(
-            currentUser,
-            username
-        );
+        if (!response.ok) {
 
-
-    const messages =
-        privateMessages[key]
-        || [];
-
-
-    messages.forEach(
-        function (message) {
-
-            addMessageBubble(
-                privateMessagesElement,
-                message
+            throw new Error(
+                "Unable to load messages."
             );
 
         }
-    );
 
 
-    scrollMessages(
-        privateMessagesElement
-    );
+        const data =
+            await response.json();
+
+
+        if (!data.success) {
+
+            return;
+
+        }
+
+
+        data.messages.forEach(
+            function (message) {
+
+                addMessageBubble(
+                    privateMessagesElement,
+                    {
+                        sender: message.sender,
+                        text: message.text,
+                        time: new Date(
+                            message.time
+                        ).toLocaleTimeString(
+                            [],
+                            {
+                                hour: "2-digit",
+                                minute: "2-digit"
+                            }
+                        )
+                    }
+                );
+
+            }
+        );
+
+
+        scrollMessages(
+            privateMessagesElement
+        );
+
+
+    } catch (error) {
+
+        privateMessagesElement.innerHTML = "";
+
+        const errorMessage =
+            document.createElement("div");
+
+
+        errorMessage.className =
+            "empty-state";
+
+
+        errorMessage.textContent =
+            "Unable to load messages.";
+
+
+        privateMessagesElement.appendChild(
+            errorMessage
+        );
+
+    }
 
 }
-
 
 function getPrivateChatKey(
     userA,
@@ -1136,14 +1185,12 @@ function getPrivateChatKey(
 
 privateMessageForm.addEventListener(
     "submit",
-    function (event) {
+    async function (event) {
 
         event.preventDefault();
 
 
-        if (
-            !selectedPrivateUser
-        ) {
+        if (!selectedPrivateUser) {
 
             return;
 
@@ -1156,49 +1203,72 @@ privateMessageForm.addEventListener(
                 .trim();
 
 
-        if (
-            text.length === 0
-        ) {
+        if (text.length === 0) {
 
             return;
 
         }
 
 
-        const key =
-            getPrivateChatKey(
-                currentUser,
-                selectedPrivateUser.username
+        try {
+
+            const response =
+                await fetch(
+                    "http://127.0.0.1:8000/api/private-messages",
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+
+                        body: JSON.stringify({
+                            sender: currentUser,
+                            receiver:
+                                selectedPrivateUser.username,
+                            message: text
+                        })
+                    }
+                );
+
+
+            const data =
+                await response.json();
+
+
+            if (!response.ok || !data.success) {
+
+                alert(
+                    data.message
+                    || "Message could not be sent."
+                );
+
+                return;
+
+            }
+
+
+            privateMessageInput.value = "";
+
+
+            // Reload the conversation from SQLite.
+            await renderPrivateMessages();
+
+
+            privateMessageInput.focus();
+
+
+        } catch (error) {
+
+            alert(
+                "Unable to connect to CipherChat server."
             );
-
-
-        if (
-            !privateMessages[key]
-        ) {
-
-            privateMessages[key] =
-                [];
 
         }
 
-
-        privateMessages[key].push(
-            {
-                sender: currentUser,
-                text: text,
-                time: getCurrentTime()
-            }
-        );
-
-
-        privateMessageInput.value =
-            "";
-
-
-        renderPrivateMessages();
-
     }
 );
+
 
 
 // Back from private chat.

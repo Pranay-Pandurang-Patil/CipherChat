@@ -22,7 +22,8 @@ from server.auth import register_user, login_user
 
 from database.database import (
     get_all_users,
-    get_private_messages
+    get_private_messages,
+    save_message
 )
 
 
@@ -180,6 +181,79 @@ def private_messages():
     return jsonify({
         "success": True,
         "messages": message_list
+    })
+
+
+# =========================================================
+# SEND PRIVATE MESSAGE
+# =========================================================
+
+@app.route("/api/private-messages", methods=["POST"])
+def send_private_message():
+
+    data = request.get_json()
+
+
+    sender = data.get(
+        "sender",
+        ""
+    )
+
+    receiver = data.get(
+        "receiver",
+        ""
+    )
+
+    message = data.get(
+        "message",
+        ""
+    ).strip()
+
+
+    # Validate required fields.
+    if (
+        sender == ""
+        or
+        receiver == ""
+        or
+        message == ""
+    ):
+
+        return jsonify({
+            "success": False,
+            "message": "Sender, receiver and message are required."
+        }), 400
+
+
+    # Keep the same 500-character
+    # message limit as the TCP server.
+    if len(message) > 500:
+
+        return jsonify({
+            "success": False,
+            "message": "Message is too long."
+        }), 400
+
+
+    # Save private message to SQLite.
+    success = save_message(
+        sender,
+        receiver,
+        message
+    )
+
+
+    if not success:
+
+        return jsonify({
+            "success": False,
+            "message": "Unable to send message."
+        }), 400
+
+
+    return jsonify({
+        "success": True,
+        "message": "Message sent."
     })
 # =========================================================
 # START API SERVER
