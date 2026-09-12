@@ -23,9 +23,13 @@ from server.auth import register_user, login_user
 from database.database import (
     get_all_users,
     get_private_messages,
-    save_message
+    save_message,
+    create_room,
+    join_room,
+    get_room,
+    get_room_members,
+    get_room_messages
 )
-
 
 # =========================================================
 # CREATE FLASK APP
