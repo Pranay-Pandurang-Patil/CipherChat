@@ -259,6 +259,65 @@ def send_private_message():
         "success": True,
         "message": "Message sent."
     })
+
+@app.route("/api/rooms", methods=["POST"])
+def create_new_room():
+    data = request.get_json()
+
+    username = data.get("username")
+    room_name = data.get("room_name")
+    room_type = data.get("room_type", "group")
+
+    if not username or not room_name:
+        return jsonify({
+            "success": False,
+            "message": "Username and room name are required"
+        }), 400
+
+    room_code = create_room(username, room_name, room_type)
+
+    if not room_code:
+        return jsonify({
+            "success": False,
+            "message": "Room creation failed"
+        }), 500
+
+    return jsonify({
+        "success": True,
+        "room_code": room_code
+    }), 201
+
+@app.route("/api/rooms/join", methods=["POST"])
+def join_existing_room():
+
+    data = request.get_json()
+
+    username = data.get("username", "")
+    room_code = data.get("room_code", "").strip()
+
+    if not username or not room_code:
+
+        return jsonify({
+            "success": False,
+            "message": "Username and room code are required."
+        }), 400
+
+    success = join_room(
+        username,
+        room_code
+    )
+
+    if not success:
+
+        return jsonify({
+            "success": False,
+            "message": "Unable to join room."
+        }), 400
+
+    return jsonify({
+        "success": True,
+        "message": "Joined room successfully."
+    })
 # =========================================================
 # START API SERVER
 # =========================================================
