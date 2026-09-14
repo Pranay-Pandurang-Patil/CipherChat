@@ -213,7 +213,7 @@ The main learning goals are:
 1. Python socket programming
 2. TCP client-server communication
 3. Multi-client communication
-4. Threading
+4. Threading and Multi threading
 5. Message framing
 6. SQLite database management
 7. Authentication
@@ -221,7 +221,7 @@ The main learning goals are:
 9. HTML/CSS/JavaScript frontend integration
 10. Git and GitHub
 
-The project will be completed after the remaining backend integration, testing, frontend cleanup, and documentation are finished.
+The project will be completed after the remaining backend integration, testing, frontend cleanup and documentation are finished.
 
 ## Author
 
@@ -229,7 +229,3 @@ Pranay Patil
 
 CSE Student
 KLS Gogte Institute of Technology, Belagavi
-
-## License
-
-This project is primarily developed as a learning and portfolio project.
