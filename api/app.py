@@ -318,6 +318,43 @@ def join_existing_room():
         "success": True,
         "message": "Joined room successfully."
     })
+
+# =========================================================
+# GET ROOM DETAILS
+# =========================================================
+
+@app.route("/api/rooms/<room_code>", methods=["GET"])
+def room_details(room_code):
+
+    room = get_room(room_code)
+
+    if not room:
+
+        return jsonify({
+            "success": False,
+            "message": "Room not found."
+        }), 404
+
+    members = get_room_members(room_code)
+
+    member_list = []
+
+    for username, role in members:
+
+        member_list.append({
+            "username": username,
+            "role": role
+        })
+
+    return jsonify({
+        "success": True,
+        "room": {
+            "code": room_code,
+            "name": room[1],
+            "type": room[2],
+            "members": member_list
+        }
+    })
 # =========================================================
 # START API SERVER
 # =========================================================
