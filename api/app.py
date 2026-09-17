@@ -355,6 +355,40 @@ def room_details(room_code):
             "members": member_list
         }
     })
+
+# =========================================================
+# GET ROOM MESSAGES
+# =========================================================
+
+@app.route("/api/rooms/<room_code>/messages", methods=["GET"])
+def room_messages(room_code):
+
+    room = get_room(room_code)
+
+    if not room:
+
+        return jsonify({
+            "success": False,
+            "message": "Room not found."
+        }), 404
+
+    messages = get_room_messages(room_code)
+
+    message_list = []
+
+    for username, message in messages:
+
+        message_list.append({
+            "sender": username,
+            "text": message
+        })
+
+    return jsonify({
+        "success": True,
+        "messages": message_list
+    })
+
+
 # =========================================================
 # START API SERVER
 # =========================================================
