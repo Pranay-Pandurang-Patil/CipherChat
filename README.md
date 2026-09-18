@@ -1,6 +1,6 @@
 # CipherChat
 
-CipherChat is a simple real-time chat application built to learn and demonstrate Python socket programming, TCP client-server communication, SQLite database management, authentication, Flask API development, and frontend web development.
+CipherChat is a simple real-time chat application built to learn and demonstrate Python socket programming, TCP client-server communication, SQLite database management, authentication, Flask API development, with frontend web development.
 
 ## Project Status
 
