@@ -1292,19 +1292,16 @@ privateChatBack.addEventListener(
 // ROOM CREATION
 // =========================================================
 
-
 createRoomForm.addEventListener(
     "submit",
-    function (event) {
+    async function (event) {
 
         event.preventDefault();
-
 
         const roomName =
             roomNameInput
                 .value
                 .trim();
-
 
         if (
             roomName.length === 0
@@ -1314,37 +1311,67 @@ createRoomForm.addEventListener(
 
         }
 
+        try {
 
-        const code =
-            generateRoomCode();
+            const response =
+                await fetch(
+                    "http://127.0.0.1:8000/api/rooms",
+                    {
+                        method: "POST",
 
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
 
-        const room =
-            {
+                        body: JSON.stringify({
+                            username: currentUser,
+                            room_name: roomName,
+                            room_type: "group"
+                        })
+                    }
+                );
+
+            const data =
+                await response.json();
+
+            if (!response.ok || !data.success) {
+
+                alert(
+                    data.message
+                    || "Room could not be created."
+                );
+
+                return;
+            }
+
+            const room = {
                 name: roomName,
-                code: code,
+                code: data.room_code,
                 owner: currentUser,
                 members: [
                     currentUser
                 ]
             };
 
+            rooms.push(
+                room
+            );
 
-        rooms.push(
-            room
-        );
+            roomNameInput.value = "";
 
+            renderRooms();
 
-        roomNameInput.value =
-            "";
+            openRoom(
+                room
+            );
 
+        } catch (error) {
 
-        renderRooms();
+            alert(
+                "Unable to connect to CipherChat server."
+            );
 
-
-        openRoom(
-            room
-        );
+        }
 
     }
 );
