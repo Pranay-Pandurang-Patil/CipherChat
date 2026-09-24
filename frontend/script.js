@@ -1384,16 +1384,14 @@ createRoomForm.addEventListener(
 
 joinRoomForm.addEventListener(
     "submit",
-    function (event) {
+    async function (event) {
 
         event.preventDefault();
-
 
         const code =
             roomCodeInput
                 .value
                 .trim();
-
 
         if (
             !/^\d{6}$/.test(code)
@@ -1403,73 +1401,92 @@ joinRoomForm.addEventListener(
 
         }
 
+        try {
 
-        const room =
-            rooms.find(
+            const response =
+                await fetch(
+                    "http://127.0.0.1:8000/api/rooms/join",
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+
+                        body: JSON.stringify({
+                            username: currentUser,
+                            room_code: code
+                        })
+                    }
+                );
+
+            const data =
+                await response.json();
+
+            if (!response.ok || !data.success) {
+
+                alert(
+                    data.message
+                    || "Unable to join room."
+                );
+
+                return;
+            }
+
+            const roomResponse =
+                await fetch(
+                    "http://127.0.0.1:8000/api/rooms/"
+                    + code
+                );
+
+            const roomData =
+                await roomResponse.json();
+
+            if (!roomResponse.ok || !roomData.success) {
+
+                alert(
+                    "Unable to load room details."
+                );
+
+                return;
+            }
+
+            const room = {
+                name: roomData.room.name,
+                code: roomData.room.code,
+                owner: currentUser,
+                members:
+                    roomData.room.members.map(
+                        function (member) {
+                            return member.username;
+                        }
+                    )
+            };
+
+            rooms = rooms.filter(
                 function (item) {
-
-                    return (
-                        item.code
-                        ===
-                        code
-                    );
-
+                    return item.code !== code;
                 }
             );
 
+            rooms.push(room);
 
-        if (!room) {
+            roomCodeInput.value = "";
 
-            alert(
-                "Room not found."
-            );
+            renderRooms();
 
-            return;
+            openRoom(room);
 
-        }
-
-
-        if (
-            room.members.length >= 10
-        ) {
+        } catch (error) {
 
             alert(
-                "This room is full."
-            );
-
-            return;
-
-        }
-
-
-        if (
-            !room.members.includes(
-                currentUser
-            )
-        ) {
-
-            room.members.push(
-                currentUser
+                "Unable to connect to CipherChat server."
             );
 
         }
-
-
-        roomCodeInput.value =
-            "";
-
-
-        renderRooms();
-
-
-        openRoom(
-            room
-        );
 
     }
 );
-
-
 // =========================================================
 // ROOM LIST
 // =========================================================
