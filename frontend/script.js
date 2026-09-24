@@ -1694,48 +1694,73 @@ function openRoom(room) {
 // =========================================================
 
 
-function renderRoomMessages() {
+async function renderRoomMessages() {
 
-    roomMessagesElement.innerHTML =
-        "";
+    roomMessagesElement.innerHTML = "";
 
-
-    if (
-        !selectedRoom
-    ) {
-
+    if (!selectedRoom) {
         return;
-
     }
-
 
     const code =
         selectedRoom.code;
 
+    try {
 
-    const messages =
-        roomMessages[code]
-        || [];
-
-
-    messages.forEach(
-        function (message) {
-
-            addMessageBubble(
-                roomMessagesElement,
-                message
+        const response =
+            await fetch(
+                "http://127.0.0.1:8000/api/rooms/"
+                + encodeURIComponent(code)
+                + "/messages"
             );
 
+        const data =
+            await response.json();
+
+        if (!response.ok || !data.success) {
+
+            return;
         }
-    );
 
+        data.messages.forEach(
+            function (message) {
 
-    scrollMessages(
-        roomMessagesElement
-    );
+                addMessageBubble(
+                    roomMessagesElement,
+                    {
+                        sender: message.sender,
+                        text: message.text,
+                        time: ""
+                    }
+                );
+
+            }
+        );
+
+        scrollMessages(
+            roomMessagesElement
+        );
+
+    } catch (error) {
+
+        roomMessagesElement.innerHTML = "";
+
+        const errorMessage =
+            document.createElement("div");
+
+        errorMessage.className =
+            "empty-state";
+
+        errorMessage.textContent =
+            "Unable to load messages.";
+
+        roomMessagesElement.appendChild(
+            errorMessage
+        );
+
+    }
 
 }
-
 
 // =========================================================
 // ROOM MESSAGE SEND
