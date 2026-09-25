@@ -1766,70 +1766,78 @@ async function renderRoomMessages() {
 // ROOM MESSAGE SEND
 // =========================================================
 
-
 roomMessageForm.addEventListener(
     "submit",
-    function (event) {
+    async function (event) {
 
         event.preventDefault();
 
-
-        if (
-            !selectedRoom
-        ) {
-
+        if (!selectedRoom) {
             return;
-
         }
-
 
         const text =
             roomMessageInput
                 .value
                 .trim();
 
-
-        if (
-            text.length === 0
-        ) {
-
+        if (text.length === 0) {
             return;
-
         }
-
 
         const code =
             selectedRoom.code;
 
+        try {
 
-        if (
-            !roomMessages[code]
-        ) {
+            const response =
+                await fetch(
+                    "http://127.0.0.1:8000/api/rooms/"
+                    + encodeURIComponent(code)
+                    + "/messages",
+                    {
+                        method: "POST",
 
-            roomMessages[code] =
-                [];
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+
+                        body: JSON.stringify({
+                            sender: currentUser,
+                            message: text
+                        })
+                    }
+                );
+
+            const data =
+                await response.json();
+
+            if (!response.ok || !data.success) {
+
+                alert(
+                    data.message
+                    || "Message could not be sent."
+                );
+
+                return;
+            }
+
+            roomMessageInput.value = "";
+
+            await renderRoomMessages();
+
+            roomMessageInput.focus();
+
+        } catch (error) {
+
+            alert(
+                "Unable to connect to CipherChat server."
+            );
 
         }
 
-
-        roomMessages[code].push(
-            {
-                sender: currentUser,
-                text: text,
-                time: getCurrentTime()
-            }
-        );
-
-
-        roomMessageInput.value =
-            "";
-
-
-        renderRoomMessages();
-
     }
 );
-
 
 // Back from room.
 
