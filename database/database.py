@@ -929,6 +929,43 @@ def get_room_members(room_code):
 
     return members
 
+
+def get_user_rooms(username):
+
+    # Find user's ID.
+    user_id = get_user_id(
+        username
+    )
+
+    if user_id is None:
+        return []
+
+    # Connect to database.
+    connection = sqlite3.connect(DATABASE)
+
+    cursor = connection.cursor()
+
+    # Get rooms where the user is a member.
+    cursor.execute(
+        """
+        SELECT
+            rooms.room_code,
+            rooms.room_name,
+            rooms.room_type
+        FROM room_members
+        JOIN rooms
+            ON room_members.room_id = rooms.id
+        WHERE room_members.user_id = ?
+        ORDER BY rooms.room_name
+        """,
+        (user_id,)
+    )
+
+    rooms = cursor.fetchall()
+
+    connection.close()
+
+    return rooms
 def get_room_messages(room_code):
 
     # Find the room.

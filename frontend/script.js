@@ -41,39 +41,13 @@ const users = [
 
 ];
 
-
-// Demo rooms.
-let rooms = [
-
-    {
-        name: "Friends",
-        code: "398612",
-        owner: "Alice",
-        members: [
-            "Alice",
-            "Bob"
-        ]
-    },
-
-    {
-        name: "College",
-        code: "583214",
-        owner: "Alice",
-        members: [
-            "Alice",
-            "Charlie"
-        ]
-    }
-
-];
-
+let rooms = [];
 
 // Demo private messages.
 const privateMessages = {};
 
 
 // Demo room messages.
-const roomMessages = {};
 
 
 // =========================================================
@@ -1491,174 +1465,173 @@ joinRoomForm.addEventListener(
 // ROOM LIST
 // =========================================================
 
+async function renderRooms() {
 
-function renderRooms() {
+    roomList.innerHTML = "";
 
-    roomList.innerHTML =
-        "";
+    try {
 
+        const response =
+            await fetch(
+                "http://127.0.0.1:8000/api/rooms/"
+                + encodeURIComponent(currentUser)
+            );
 
-    const userRooms =
-        rooms.filter(
+        const data =
+            await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error("Unable to load rooms.");
+        }
+
+        const userRooms =
+            data.rooms;
+
+        if (
+            userRooms.length === 0
+        ) {
+
+            const empty =
+                document.createElement(
+                    "div"
+                );
+
+            empty.className =
+                "empty-state";
+
+            empty.innerHTML =
+                `
+                    <strong>No rooms yet</strong>
+                    <p>Create or join a room to get started.</p>
+                `;
+
+            roomList.appendChild(
+                empty
+            );
+
+            return;
+        }
+
+        userRooms.forEach(
             function (room) {
 
-                return room.members.includes(
-                    currentUser
+                const row =
+                    document.createElement(
+                        "button"
+                    );
+
+                row.type = "button";
+
+                row.className =
+                    "room-row";
+
+                const icon =
+                    document.createElement(
+                        "div"
+                    );
+
+                icon.className =
+                    "room-row-icon";
+
+                icon.textContent =
+                    "#";
+
+                const details =
+                    document.createElement(
+                        "div"
+                    );
+
+                details.className =
+                    "room-details";
+
+                const name =
+                    document.createElement(
+                        "strong"
+                    );
+
+                name.textContent =
+                    room.name;
+
+                const members =
+                    document.createElement(
+                        "small"
+                    );
+
+                members.textContent =
+                    room.members.length
+                    + " members";
+
+                const code =
+                    document.createElement(
+                        "span"
+                    );
+
+                code.className =
+                    "room-code";
+
+                code.textContent =
+                    room.code;
+
+                details.appendChild(
+                    name
+                );
+
+                details.appendChild(
+                    members
+                );
+
+                row.appendChild(
+                    icon
+                );
+
+                row.appendChild(
+                    details
+                );
+
+                row.appendChild(
+                    code
+                );
+
+                row.addEventListener(
+                    "click",
+                    function () {
+
+                        openRoom(
+                            room
+                        );
+
+                    }
+                );
+
+                roomList.appendChild(
+                    row
                 );
 
             }
         );
 
+    } catch (error) {
 
-    if (
-        userRooms.length === 0
-    ) {
+        roomList.innerHTML = "";
 
         const empty =
             document.createElement(
                 "div"
             );
 
-
         empty.className =
             "empty-state";
 
-
-        empty.innerHTML =
-            `
-                <strong>No rooms yet</strong>
-                <p>Create or join a room to get started.</p>
-            `;
-
+        empty.textContent =
+            "Unable to load rooms.";
 
         roomList.appendChild(
             empty
         );
 
-
-        return;
-
     }
 
-
-    userRooms.forEach(
-        function (room) {
-
-            const row =
-                document.createElement(
-                    "button"
-                );
-
-
-            row.type = "button";
-
-            row.className =
-                "room-row";
-
-
-            const icon =
-                document.createElement(
-                    "div"
-                );
-
-
-            icon.className =
-                "room-row-icon";
-
-
-            icon.textContent =
-                "#";
-
-
-            const details =
-                document.createElement(
-                    "div"
-                );
-
-
-            details.className =
-                "room-details";
-
-
-            const name =
-                document.createElement(
-                    "strong"
-                );
-
-
-            name.textContent =
-                room.name;
-
-
-            const members =
-                document.createElement(
-                    "small"
-                );
-
-
-            members.textContent =
-                room.members.length
-                + " members";
-
-
-            const code =
-                document.createElement(
-                    "span"
-                );
-
-
-            code.className =
-                "room-code";
-
-
-            code.textContent =
-                room.code;
-
-
-            details.appendChild(
-                name
-            );
-
-            details.appendChild(
-                members
-            );
-
-
-            row.appendChild(
-                icon
-            );
-
-            row.appendChild(
-                details
-            );
-
-            row.appendChild(
-                code
-            );
-
-
-            row.addEventListener(
-                "click",
-                function () {
-
-                    openRoom(
-                        room
-                    );
-
-                }
-            );
-
-
-            roomList.appendChild(
-                row
-            );
-
-        }
-    );
-
 }
-
-
 // =========================================================
 // OPEN ROOM
 // =========================================================
@@ -2111,41 +2084,6 @@ membersModal.addEventListener(
 // ROOM CODE GENERATOR
 // =========================================================
 
-
-function generateRoomCode() {
-
-    let code;
-
-
-    do {
-
-        code =
-            Math.floor(
-                100000
-                +
-                Math.random()
-                * 900000
-            ).toString();
-
-
-    } while (
-        rooms.some(
-            function (room) {
-
-                return (
-                    room.code
-                    ===
-                    code
-                );
-
-            }
-        )
-    );
-
-
-    return code;
-
-}
 
 
 // =========================================================
