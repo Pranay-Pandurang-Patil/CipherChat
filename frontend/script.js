@@ -1464,7 +1464,6 @@ joinRoomForm.addEventListener(
 // =========================================================
 // ROOM LIST
 // =========================================================
-
 async function renderRooms() {
 
     roomList.innerHTML = "";
@@ -1473,7 +1472,7 @@ async function renderRooms() {
 
         const response =
             await fetch(
-                "http://127.0.0.1:8000/api/rooms/"
+                "http://127.0.0.1:8000/api/user-rooms/"
                 + encodeURIComponent(currentUser)
             );
 
