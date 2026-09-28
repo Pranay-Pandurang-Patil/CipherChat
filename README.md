@@ -101,7 +101,7 @@ Core Backend:
 Python TCP Socket Server
 
 Database:
-SQLite
+SQLite 
 
 Architecture:
 
@@ -176,7 +176,7 @@ CipherChat/
 - Remove remaining demo message storage
 - Add loading states
 - Add connection/error states
-- Final UI polishing
+- Final UI polishing and Enhancement 
 
 ### Testing
 - Registration testing
