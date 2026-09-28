@@ -28,7 +28,8 @@ from database.database import (
     join_room,
     get_room,
     get_room_members,
-    get_room_messages
+    get_room_messages,
+    get_user_rooms
 )
 
 # =========================================================
@@ -440,6 +441,40 @@ def send_room_message(room_code):
     return jsonify({
         "success": True,
         "message": "Room message sent."
+    })
+
+@app.route("/api/user-rooms/<username>", methods=["GET"])
+def get_user_room_list(username):
+
+    rooms = get_user_rooms(username)
+
+    room_list = []
+
+    for room_code, room_name, room_type in rooms:
+
+        members = get_room_members(room_code)
+
+        member_list = []
+        owner = ""
+
+        for member_username, role in members:
+
+            member_list.append(member_username)
+
+            if role == "owner":
+                owner = member_username
+
+        room_list.append({
+            "code": room_code,
+            "name": room_name,
+            "type": room_type,
+            "owner": owner,
+            "members": member_list
+        })
+
+    return jsonify({
+        "success": True,
+        "rooms": room_list
     })
 # =========================================================
 # START API SERVER
