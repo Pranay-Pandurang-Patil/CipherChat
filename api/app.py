@@ -29,9 +29,9 @@ from database.database import (
     get_room,
     get_room_members,
     get_room_messages,
-    get_user_rooms
+    get_user_rooms,
+    is_room_member
 )
-
 # =========================================================
 # CREATE FLASK APP
 # =========================================================
@@ -323,11 +323,34 @@ def join_existing_room():
 # =========================================================
 # GET ROOM DETAILS
 # =========================================================
-
 @app.route("/api/rooms/<room_code>", methods=["GET"])
 def room_details(room_code):
 
-    room = get_room(room_code)
+    username = request.args.get(
+        "username",
+        ""
+    ).strip()
+
+    if not username:
+
+        return jsonify({
+            "success": False,
+            "message": "Username is required."
+        }), 400
+
+    if not is_room_member(
+        username,
+        room_code
+    ):
+
+        return jsonify({
+            "success": False,
+            "message": "You are not a member of this room."
+        }), 403
+
+    room = get_room(
+        room_code
+    )
 
     if not room:
 
@@ -336,7 +359,9 @@ def room_details(room_code):
             "message": "Room not found."
         }), 404
 
-    members = get_room_members(room_code)
+    members = get_room_members(
+        room_code
+    )
 
     member_list = []
 
@@ -356,7 +381,6 @@ def room_details(room_code):
             "members": member_list
         }
     })
-
 # =========================================================
 # GET ROOM MESSAGES
 # =========================================================

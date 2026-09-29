@@ -928,7 +928,41 @@ def get_room_members(room_code):
 
 
     return members
+def is_room_member(username, room_code):
 
+    user_id = get_user_id(
+        username
+    )
+
+    if user_id is None:
+        return False
+
+    connection = sqlite3.connect(
+        DATABASE
+    )
+
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT 1
+        FROM room_members
+        JOIN rooms
+            ON room_members.room_id = rooms.id
+        WHERE room_members.user_id = ?
+        AND rooms.room_code = ?
+        """,
+        (
+            user_id,
+            room_code
+        )
+    )
+
+    result = cursor.fetchone()
+
+    connection.close()
+
+    return result is not None
 
 def get_user_rooms(username):
 
