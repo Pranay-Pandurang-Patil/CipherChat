@@ -18,7 +18,7 @@ CipherChat is a simple real-time chat application built to learn and demonstrate
 - Clean client disconnect handling
 - 1-to-1 private messaging logic
 - Chat room messaging logic
-- Six-digit room codes
+- Six-digit room codes and protection
 - Maximum 10 members per room
 - Room owner/member roles
 
