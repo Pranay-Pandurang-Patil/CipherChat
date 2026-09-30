@@ -1680,11 +1680,12 @@ async function renderRoomMessages() {
     try {
 
         const response =
-            await fetch(
-                "http://127.0.0.1:8000/api/rooms/"
-                + encodeURIComponent(code)
-                + "/messages"
-            );
+    await fetch(
+        "http://127.0.0.1:8000/api/rooms/"
+        + encodeURIComponent(code)
+        + "/messages?username="
+        + encodeURIComponent(currentUser)
+    );
 
         const data =
             await response.json();

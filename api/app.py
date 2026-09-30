@@ -387,7 +387,27 @@ def room_details(room_code):
 
 @app.route("/api/rooms/<room_code>/messages", methods=["GET"])
 def room_messages(room_code):
+    username = request.args.get(
+        "username",
+        ""
+    ).strip()
 
+    if not username:
+
+        return jsonify({
+            "success": False,
+            "message": "Username is required."
+        }), 400
+
+    if not is_room_member(
+        username,
+        room_code
+    ):
+
+        return jsonify({
+            "success": False,
+            "message": "You are not a member of this room."
+        }), 403
     room = get_room(room_code)
 
     if not room:
