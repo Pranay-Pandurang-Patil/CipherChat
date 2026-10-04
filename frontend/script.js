@@ -1408,11 +1408,12 @@ joinRoomForm.addEventListener(
             }
 
             const roomResponse =
-                await fetch(
-                    "http://127.0.0.1:8000/api/rooms/"
-                    + code
-                );
-
+    await fetch(
+        "http://127.0.0.1:8000/api/rooms/"
+        + encodeURIComponent(code)
+        + "?username="
+        + encodeURIComponent(currentUser)
+    );
             const roomData =
                 await roomResponse.json();
 
