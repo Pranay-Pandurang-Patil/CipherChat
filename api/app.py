@@ -436,11 +436,32 @@ def room_messages(room_code):
 # =========================================================
 # SEND ROOM MESSAGE
 # =========================================================
-
 @app.route("/api/rooms/<room_code>/messages", methods=["POST"])
 def send_room_message(room_code):
 
     data = request.get_json()
+
+    username = data.get(
+        "sender",
+        ""
+    ).strip()
+
+    if not username:
+
+        return jsonify({
+            "success": False,
+            "message": "Username is required."
+        }), 400
+
+    if not is_room_member(
+        username,
+        room_code
+    ):
+
+        return jsonify({
+            "success": False,
+            "message": "You are not a member of this room."
+        }), 403
 
     sender = data.get("sender", "")
     message = data.get("message", "").strip()
@@ -451,41 +472,6 @@ def send_room_message(room_code):
             "success": False,
             "message": "Sender and message are required."
         }), 400
-
-    if len(message) > 500:
-
-        return jsonify({
-            "success": False,
-            "message": "Message is too long."
-        }), 400
-
-    room = get_room(room_code)
-
-    if not room:
-
-        return jsonify({
-            "success": False,
-            "message": "Room not found."
-        }), 404
-
-    success = save_message(
-        sender,
-        None,
-        message,
-        room_code
-    )
-
-    if not success:
-
-        return jsonify({
-            "success": False,
-            "message": "Unable to send room message."
-        }), 400
-
-    return jsonify({
-        "success": True,
-        "message": "Room message sent."
-    })
 
 @app.route("/api/user-rooms/<username>", methods=["GET"])
 def get_user_room_list(username):
