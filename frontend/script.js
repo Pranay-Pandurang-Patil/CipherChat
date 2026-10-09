@@ -412,7 +412,7 @@ loginForm.addEventListener(
         }
 
 
-       fetch("http://127.0.0.1:8000/api/login", {
+       fetch("https://cipherchat-opd4.onrender.com/api/login", {
     method: "POST",
 
     headers: {
@@ -502,7 +502,7 @@ registerForm.addEventListener(
         
 
 
-       fetch("http://127.0.0.1:8000/api/register", {
+       fetch("https://cipherchat-opd4.onrender.com/api/register", {
     method: "POST",
 
     headers: {
@@ -807,7 +807,7 @@ async function renderUsers(searchText = "") {
 
         const response =
             await fetch(
-                "http://127.0.0.1:8000/api/users"
+                "https://cipherchat-opd4.onrender.com/api/users"
             );
 
 
@@ -1054,7 +1054,7 @@ async function renderPrivateMessages() {
 
         const response =
             await fetch(
-                "http://127.0.0.1:8000/api/private-messages"
+                "https://cipherchat-opd4.onrender.com/api/private-messages"
                 + "?username="
                 + encodeURIComponent(currentUser)
                 + "&other_username="
@@ -1188,7 +1188,7 @@ privateMessageForm.addEventListener(
 
             const response =
                 await fetch(
-                    "http://127.0.0.1:8000/api/private-messages",
+                    "https://cipherchat-opd4.onrender.com/api/private-messages",
                     {
                         method: "POST",
 
@@ -1289,7 +1289,7 @@ createRoomForm.addEventListener(
 
             const response =
                 await fetch(
-                    "http://127.0.0.1:8000/api/rooms",
+                    "https://cipherchat-opd4.onrender.com/api/rooms",
                     {
                         method: "POST",
 
@@ -1379,7 +1379,7 @@ joinRoomForm.addEventListener(
 
             const response =
                 await fetch(
-                    "http://127.0.0.1:8000/api/rooms/join",
+                    "https://cipherchat-opd4.onrender.com/api/rooms/join",
                     {
                         method: "POST",
 
@@ -1409,7 +1409,7 @@ joinRoomForm.addEventListener(
 
             const roomResponse =
     await fetch(
-        "http://127.0.0.1:8000/api/rooms/"
+        "https://cipherchat-opd4.onrender.com/api/rooms/"
         + encodeURIComponent(code)
         + "?username="
         + encodeURIComponent(currentUser)
@@ -1473,7 +1473,7 @@ async function renderRooms() {
 
         const response =
             await fetch(
-                "http://127.0.0.1:8000/api/user-rooms/"
+                "https://cipherchat-opd4.onrender.com/api/user-rooms/"
                 + encodeURIComponent(currentUser)
             );
 
@@ -1682,7 +1682,7 @@ async function renderRoomMessages() {
 
         const response =
     await fetch(
-        "http://127.0.0.1:8000/api/rooms/"
+        "https://cipherchat-opd4.onrender.com/api/rooms/"
         + encodeURIComponent(code)
         + "/messages?username="
         + encodeURIComponent(currentUser)
@@ -1766,7 +1766,7 @@ roomMessageForm.addEventListener(
 
             const response =
                 await fetch(
-                    "http://127.0.0.1:8000/api/rooms/"
+                    "https://cipherchat-opd4.onrender.com/api/rooms/"
                     + encodeURIComponent(code)
                     + "/messages",
                     {
