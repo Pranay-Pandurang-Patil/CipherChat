@@ -21,6 +21,8 @@ sys.path.append(PROJECT_ROOT)
 from server.auth import register_user, login_user
 from database.database import (
     create_database,
+    create_postgres_database,
+    DATABASE_URL,
     get_all_users,
     get_private_messages,
     save_message,
@@ -38,8 +40,11 @@ from database.database import (
 
 app = Flask(__name__)
 
-# Initialize the database tables.
-create_database()
+# Initialize the appropriate database.
+if DATABASE_URL:
+    create_postgres_database()
+else:
+    create_database()
 # =========================================================
 # HEALTH CHECK
 # =========================================================
