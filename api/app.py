@@ -19,8 +19,8 @@ sys.path.append(PROJECT_ROOT)
 # =========================================================
 
 from server.auth import register_user, login_user
-
 from database.database import (
+    create_database,
     get_all_users,
     get_private_messages,
     save_message,
@@ -38,7 +38,8 @@ from database.database import (
 
 app = Flask(__name__)
 
-
+# Initialize the database tables.
+create_database()
 # =========================================================
 # HEALTH CHECK
 # =========================================================

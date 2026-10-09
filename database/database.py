@@ -6,7 +6,8 @@ from datetime import datetime
 
 
 # Location of our SQLite database.
-DATABASE = "database/cipherchat.db"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATABASE = os.path.join(BASE_DIR, "database", "cipherchat.db")
 
 
 # =========================================================
