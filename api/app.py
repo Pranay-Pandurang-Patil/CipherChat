@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 import sys
 import os
-
+from flask_cors import CORS
 
 # =========================================================
 # PROJECT PATH
@@ -39,6 +39,11 @@ from database.database import (
 # =========================================================
 
 app = Flask(__name__)
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["https://cipherchat-sigma.vercel.app"]
+    }
+})
 
 # Initialize the appropriate database.
 if DATABASE_URL:
