@@ -4,13 +4,20 @@
 
 ![Python](https://img.shields.io/badge/Python-3.x-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Flask](https://img.shields.io/badge/Flask-API-000000?style=for-the-badge&logo=flask&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-Database-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-Frontend-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
 ![HTML5](https://img.shields.io/badge/HTML5-Frontend-E34F26?style=for-the-badge&logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/CSS3-Frontend-1572B6?style=for-the-badge&logo=css3&logoColor=white)
 ![GitHub](https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-Frontend-000000?style=for-the-badge&logo=vercel&logoColor=white)
+![Render](https://img.shields.io/badge/Render-Backend-46E3B7?style=for-the-badge&logo=render&logoColor=white)
 
 ---
+## 🌐 Live Demo
+
+🔗 **[Launch CipherChat](https://cipherchat-sigma.vercel.app)**
+
+> **Note:** The frontend is hosted on Vercel, and the backend runs on Render. If the backend has been idle, its first request may take some time while the service starts up. If the application doesn't respond immediately, wait briefly and try again.
 
 ## 📌 Overview
 
@@ -21,21 +28,17 @@ The project started with a Python TCP socket-based client-server chat system and
 The current application supports:
 
 - User registration and login
-- Secure password storage
+- Password hashing and secure password storage
 - User discovery
 - One-to-one private messaging
 - Persistent private message history
-- Chat room creation
-- Chat room joining
-- Room membership management
-- Room owner/member roles
-- Six-digit room codes
-- Room messaging
-- Persistent room message history
-- Membership-based room access protection
-- Browser-based frontend
-- Flask REST-style API
-- SQLite database persistence
+- Chat room creation and joining
+- Room member management
+- Room-based messaging
+- Backend API development with Flask
+- PostgreSQL database integration
+- A browser-based interface built with HTML, CSS, and JavaScript
+- A Python TCP socket-based client-server chat implementation
 
 ---
 
